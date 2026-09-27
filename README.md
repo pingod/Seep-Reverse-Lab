@@ -156,7 +156,9 @@ Seep\ (251 MB)
 ├── README.md                      ← This file (English default)
 ├── README.zh.md                   ← Chinese documentation (中文文档)
 ├── CLAUDE.md                      ← Project-level instructions for Claude Code
-├── .mcp.json                      ← Project-level MCP registration (Claude Code / OpenCode)
+├── qoder.md                       ← Project-level instructions for Qoder (auto-loaded)
+├── .mcp.json                      ← Project-level MCP registration (Claude Code / Qoder / OpenCode)
+├── .qoder\settings.json           ← Qoder project MCP enablement (auto-loads seep / js-reverse)
 ├── DSH-PROFILE.md                 ← DeepSeek Harness Cordis plugin config template
 ├── check.bat                      ← ⭐ Double-click one-shot health verifier (Windows)
 ├── check.ps1                      ← PowerShell health verifier entry point
@@ -178,7 +180,8 @@ Seep\ (251 MB)
 │   │       │   ├── radare2\       ← 39 MB (v6.2.2 full suite)
 │   │       │   ├── apktool\       ← 24 MB (v3.0.3)
 │   │       │   ├── hook-mcp\      ← Frida / LSPosed instrumentation templates
-│   │       │   ├── ida-pro-mcp\   ← IDA bridge adapter
+│   │       │   ├── ida-mcp-plugin\← Official Hex-Rays ida-mcp plugin (IDA ≥ 9.4)
+│   │       │   ├── ida-pro-mcp\   ← ⚠️ legacy mrexodia bridge, deprecated
 │   │       │   ├── js-reverse-mcp\← Web / JS debugging engine
 │   │       │   └── playwright-mcp\← Headless browser automation
 │   │       └── reverselab\        ← 289 field journals + attack chains
@@ -213,7 +216,7 @@ The bundled `seep` MCP server exposes **23 native tools** across five functional
 | Category | Tool | Functionality | Token Mode |
 |---|---|---|---|
 | **Health** | `seep_status` | Verifies Radare2, JADX, Apktool, KB readiness | — |
-| | `seep_ida_status` | Probes IDA Pro MCP service connectivity | — |
+| | `seep_ida_status` | Probes IDA readiness (idalib / uvx / GUI plugin / nexus backends) | — |
 | **Binary (R2)** | `seep_r2_info` | Architecture, bitness, DEP/ASLR/Canary/PIE | — |
 | | `seep_r2_strings` | Extracts strings with regex + section filtering | `limit=` |
 | | `seep_r2_functions` | Functions, imports, exports, entry points | `limit=` |
@@ -262,6 +265,7 @@ powershell -ExecutionPolicy Bypass -File .\install.ps1
 | **Claude Code** | `CLAUDE.md` (project root) | `.mcp.json` (project root) | Run `claude` in workspace root — auto-loaded |
 | **DeepSeek Harness** | `Tool/prompts/AGENTS.md` | `DSH-PROFILE.md` (Cordis YAML) | Copy instructions + paste plugin config to DSH profile |
 | **OpenCode / Codex** | `AGENTS.md` (project root) | Client global config | Copy `Tool/prompts/AGENTS.md` to project root |
+| **Qoder** | `qoder.md` (project root) | `.mcp.json` (project root) + `.qoder/settings.json` | Open workspace root in Qoder — `qoder.md` auto-loads, MCP auto-enabled |
 
 ### 4. Verify Your Deployment
 
@@ -335,7 +339,7 @@ Deactivate: exit lab
 
 ### 3. Binary / Native (PE / ELF / Mach-O)
 - Headless Radare2: architecture ID, entropy scan, symbol recovery, C-like decompilation
-- Full IDA Pro MCP integration: Hex-Rays decompilation, xrefs, struct recovery
+- Official Hex-Rays ida-mcp (6 tools): `open_database` + `execute_python` drive decompilation, xrefs and struct recovery
 - Anti-tamper defeat: deliberate crash stubs, raw `svc` syscall detection, kernel anti-debug
 
 ### 4. CTF & Challenge Workflows

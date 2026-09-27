@@ -1,5 +1,5 @@
 ﻿{
-    "generated_at":  "2026-09-19 02:26:49 +08:00",
+    "generated_at":  "2026-09-27 01:27:19 +08:00",
     "routing_entry":  [
                           "SKILL.md",
                           "routing.md"
@@ -41,7 +41,7 @@
                       "available":  true,
                       "is_executable":  true,
                       "is_directory":  false,
-                      "resolved_path":  "D:\\Data\\platform-tools\\adb.exe",
+                      "resolved_path":  "C:\\Users\\<you>\\AppData\\Local\\Microsoft\\WinGet\\Packages\\Google.PlatformTools_Microsoft.Winget.Source_8wekyb3d8bbwe\\platform-tools\\adb.exe",
                       "version":  "Android Debug Bridge version 1.0.41",
                       "source":  "Get-Command",
                       "script_refs":  [
@@ -52,12 +52,12 @@
                       "name":  "java",
                       "skill":  "apk-reverse",
                       "purpose":  "运行 jar 与 Java 工具链",
-                      "available":  false,
-                      "is_executable":  false,
+                      "available":  true,
+                      "is_executable":  true,
                       "is_directory":  false,
-                      "resolved_path":  "",
+                      "resolved_path":  "D:\\jdk\\jdk-17.0.20.1+1\\bin\\java.exe",
                       "version":  "",
-                      "source":  "Missing",
+                      "source":  "Get-Command",
                       "script_refs":  [
                                           "apk-reverse/scripts/decode.ps1"
                                       ]
@@ -94,11 +94,25 @@
                       "name":  "idalib-mcp",
                       "skill":  "ida-reverse",
                       "purpose":  "IDA Pro idalib MCP HTTP/stdio 服务器",
+                      "available":  false,
+                      "is_executable":  false,
+                      "is_directory":  false,
+                      "resolved_path":  "",
+                      "version":  "",
+                      "source":  "Missing",
+                      "script_refs":  [
+                                          null
+                                      ]
+                  },
+                  {
+                      "name":  "ida-mcp",
+                      "skill":  "ida-reverse",
+                      "purpose":  "官方 Hex-Rays IDA MCP（由 uvx 拉起，无固定端口）",
                       "available":  true,
                       "is_executable":  true,
                       "is_directory":  false,
-                      "resolved_path":  "D:\\Data\\Python\\Scripts\\idalib-mcp.exe",
-                      "version":  "v0.5.0",
+                      "resolved_path":  "D:\\Program Files\\Python\\Python314\\Scripts\\uvx.exe",
+                      "version":  "20260924.0.3",
                       "source":  "Get-Command",
                       "script_refs":  [
                                           null
@@ -107,13 +121,13 @@
                   {
                       "name":  "ida-pro-mcp",
                       "skill":  "ida-reverse",
-                      "purpose":  "IDA Pro MCP CLI / 插件安装器",
-                      "available":  true,
-                      "is_executable":  true,
+                      "purpose":  "[已废弃] mrexodia 版 IDA MCP；保留仅为历史索引兼容",
+                      "available":  false,
+                      "is_executable":  false,
                       "is_directory":  false,
-                      "resolved_path":  "D:\\Data\\Python\\Scripts\\ida-pro-mcp.exe",
-                      "version":  "v0.5.0",
-                      "source":  "Get-Command",
+                      "resolved_path":  "",
+                      "version":  "",
+                      "source":  "Missing",
                       "script_refs":  [
                                           null
                                       ]
@@ -122,12 +136,12 @@
                       "name":  "ida",
                       "skill":  "ida-reverse",
                       "purpose":  "IDA Pro 主程序",
-                      "available":  false,
-                      "is_executable":  false,
+                      "available":  true,
+                      "is_executable":  true,
                       "is_directory":  false,
-                      "resolved_path":  "",
+                      "resolved_path":  "D:\\Program Files\\IDA Professional 9.4\\ida.exe",
                       "version":  "",
-                      "source":  "Missing",
+                      "source":  "FallbackPath",
                       "script_refs":  [
                                           null
                                       ]
@@ -150,12 +164,12 @@
                       "name":  "frida",
                       "skill":  "apk-reverse",
                       "purpose":  "Frida 动态注入",
-                      "available":  false,
-                      "is_executable":  false,
+                      "available":  true,
+                      "is_executable":  true,
                       "is_directory":  false,
-                      "resolved_path":  "",
+                      "resolved_path":  "D:\\Program Files\\Python\\Python314\\Scripts\\frida.exe",
                       "version":  "",
-                      "source":  "Missing",
+                      "source":  "Get-Command",
                       "script_refs":  [
                                           "apk-reverse/scripts/frida-run.ps1"
                                       ]
@@ -164,12 +178,12 @@
                       "name":  "frida-ps",
                       "skill":  "apk-reverse",
                       "purpose":  "Frida 进程枚举",
-                      "available":  false,
-                      "is_executable":  false,
+                      "available":  true,
+                      "is_executable":  true,
                       "is_directory":  false,
-                      "resolved_path":  "",
+                      "resolved_path":  "D:\\Program Files\\Python\\Python314\\Scripts\\frida-ps.exe",
                       "version":  "",
-                      "source":  "Missing",
+                      "source":  "Get-Command",
                       "script_refs":  [
                                           "apk-reverse/scripts/frida-run.ps1"
                                       ]
@@ -335,7 +349,7 @@
                       "available":  true,
                       "is_executable":  true,
                       "is_directory":  false,
-                      "resolved_path":  "D:\\Data\\Python\\python.exe",
+                      "resolved_path":  "D:\\Program Files\\Python\\Python314\\python.exe",
                       "version":  "",
                       "source":  "Get-Command",
                       "script_refs":  [
@@ -350,7 +364,7 @@
                       "available":  true,
                       "is_executable":  true,
                       "is_directory":  false,
-                      "resolved_path":  "D:\\Data\\Python\\Scripts\\pip.exe",
+                      "resolved_path":  "D:\\Program Files\\Python\\Python314\\Scripts\\pip.exe",
                       "version":  "",
                       "source":  "Get-Command",
                       "script_refs":  [
@@ -364,7 +378,7 @@
                       "available":  true,
                       "is_executable":  true,
                       "is_directory":  false,
-                      "resolved_path":  "D:\\Tool\\node\\node.exe",
+                      "resolved_path":  "C:\\Program Files\\nodejs\\node.exe",
                       "version":  "",
                       "source":  "Get-Command",
                       "script_refs":  [
@@ -378,7 +392,7 @@
                       "available":  true,
                       "is_executable":  true,
                       "is_directory":  false,
-                      "resolved_path":  "D:\\Tool\\node\\npx.cmd",
+                      "resolved_path":  "C:\\Program Files\\nodejs\\npx.cmd",
                       "version":  "",
                       "source":  "Get-Command",
                       "script_refs":  [
@@ -473,12 +487,12 @@
                       "name":  "playwright",
                       "skill":  "browser-automation",
                       "purpose":  "Playwright 浏览器引擎",
-                      "available":  false,
-                      "is_executable":  false,
+                      "available":  true,
+                      "is_executable":  true,
                       "is_directory":  false,
-                      "resolved_path":  "",
+                      "resolved_path":  "D:\\Program Files\\Python\\Python314\\Scripts\\playwright.exe",
                       "version":  "",
-                      "source":  "Missing",
+                      "source":  "Get-Command",
                       "script_refs":  [
                                           "browser-automation/SKILL.md",
                                           "browser-automation/scripts/setup.ps1"

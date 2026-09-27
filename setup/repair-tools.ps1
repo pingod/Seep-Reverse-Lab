@@ -178,20 +178,43 @@ if (Should-Run 'js-reverse-mcp') {
     }
 }
 
-# ---------------------------------------------------------------- ida-pro-mcp
-if (Should-Run 'ida-pro-mcp') {
-    Write-Host "`n  [6/6] ida-pro-mcp (IDA 桥接)" -ForegroundColor Cyan
-    $dst = Join-Path $ToolsDir 'ida-pro-mcp'
-    if ((Test-Path $dst) -and -not $Force) { Write-Ok '已存在，跳过'; $results['ida-pro-mcp'] = $true }
-    else {
-        Write-Info 'pip install ida-pro-mcp ...'
-        & python -m pip install --quiet ida-pro-mcp 2>&1 | Out-Null
+# ---------------------------------------------------------------- ida-mcp（官方 Hex-Rays）
+if ((Should-Run 'ida-mcp') -or (Should-Run 'ida-pro-mcp')) {   # 兼容旧 -Only 名称
+    Write-Host "`n  [6/6] ida-mcp (官方 IDA 桥接)" -ForegroundColor Cyan
+    # v3：server 由 uvx 按需拉起，不再往 ToolsDir 里 pip install 一份
+    #（旧 'ida-pro-mcp' 条目是 mrexodia 版，已废弃；仓库内副本仅作历史保留）
+    $uvx = $null
+    foreach ($c in @('uvx', 'uvx.exe')) {
+        $g = Get-Command $c -ErrorAction SilentlyContinue
+        if ($g) { $uvx = $g.Source; break }
+    }
+    if (-not $uvx) {
+        $pats = @(
+            (Join-Path $env:LOCALAPPDATA 'Programs\Python\Python*\Scripts\uvx.exe'),
+            (Join-Path $env:USERPROFILE '.local\bin\uvx.exe'),
+            'D:\Program Files\Python\Python*\Scripts\uvx.exe',
+            'C:\Program Files\Python*\Scripts\uvx.exe'
+        )
+        foreach ($p in $pats) {
+            $hit = Get-ChildItem $p -ErrorAction SilentlyContinue | Select-Object -First 1
+            if ($hit) { $uvx = $hit.FullName; break }
+        }
+    }
+    if ($uvx) {
+        Write-Ok "uvx: $uvx"
+        Write-Info '预热官方 server（uvx 会缓存 ida-mcp 及其依赖，之后秒起）...'
+        & $uvx ida-mcp --help 2>&1 | Out-Null
         if ($LASTEXITCODE -eq 0) {
-            New-Item -ItemType Directory -Force -Path $dst | Out-Null
-            Write-Ok 'ida-pro-mcp 已装入 Python 环境'
-            Write-Info '（IDA 本体需你自备，见 MANUAL\IDA-PRO.md）'
-            $results['ida-pro-mcp'] = $true
-        } else { Write-Warn 'ida-pro-mcp 安装失败'; $results['ida-pro-mcp'] = $false }
+            Write-Ok 'ida-mcp 可用'
+            $results['ida-mcp'] = $true
+        } else {
+            Write-Warn 'ida-mcp 预热失败（检查网络 / 代理）'
+            $results['ida-mcp'] = $false
+        }
+        Write-Info 'GUI 插件与 ida-nexus 由 setup\install-ida.ps1 负责'
+    } else {
+        Write-Warn '未找到 uvx，请 pip install uv 后重跑'
+        $results['ida-mcp'] = $false
     }
 }
 

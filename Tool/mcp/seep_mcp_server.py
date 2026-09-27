@@ -94,13 +94,51 @@ def _clean_r2_output(text: str) -> str:
     ansi_escape = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
     return ansi_escape.sub('', text)
 
+def _java_home_roots() -> list:
+    """收集所有可能的 JAVA_HOME 取值。
+
+    修复背景：MCP 服务由 Agent 在启动时拉起，继承的是**那个终端**的环境快照。
+    后装/后改的 JAVA_HOME（或 PATH 里的 java）不会进入已运行进程的 environ，
+    于是明明装了 JDK 仍会报 "Java runtime ... is required"。
+    因此除当前进程环境外，再从注册表读一次用户级与系统级 JAVA_HOME。
+    """
+    roots = []
+    for v in (os.environ.get("JAVA_HOME"),):
+        if v:
+            roots.append(v)
+    if sys.platform == "win32":
+        try:
+            import winreg
+            for key, path in (
+                (winreg.HKEY_CURRENT_USER, r"Environment"),
+                (winreg.HKEY_LOCAL_MACHINE,
+                 r"SYSTEM\CurrentControlSet\Control\Session Manager\Environment"),
+            ):
+                try:
+                    with winreg.OpenKey(key, path) as h:
+                        v, _ = winreg.QueryValueEx(h, "JAVA_HOME")
+                        if v:
+                            roots.append(v)
+                except OSError:
+                    pass
+        except Exception:
+            pass
+    return roots
+
+
 def _find_java() -> Optional[str]:
     """寻找 Java 运行时可执行路径"""
     if shutil.which("java"):
         return "java"
+    # JAVA_HOME 优先（工具自身的报错文案就是提示设置 JAVA_HOME，原来却没读它）
+    for home in _java_home_roots():
+        exe = os.path.join(home, "bin", "java.exe")
+        if os.path.isfile(exe):
+            return exe
     candidates = [
         r"D:\Tool\JDK\bin\java.exe",
         r"D:\Tool\Android Studio\jbr\bin\java.exe",
+        r"D:\jdk",
         r"C:\Program Files\Java",
         r"C:\Program Files\Eclipse Adoptium",
         r"C:\Program Files\Microsoft"
@@ -113,6 +151,29 @@ def _find_java() -> Optional[str]:
                 if "java.exe" in files:
                     return os.path.join(root, "java.exe")
     return None
+
+
+def _inject_java_env() -> None:
+    """把定位到的 JDK 写入本进程环境，使所有子进程（jadx.bat / apktool 等）可用。
+
+    修复背景：jadx 官方启动脚本只认 JAVA_HOME 与 PATH，不认 Python 侧找到的 java
+    路径；而本服务由 Agent 在启动时拉起，继承的是旧终端的环境快照，后装的 JDK 不在
+    其中，导致明明 Java 已就绪仍报 "Java runtime ... is required"。
+    """
+    java_path = _find_java()
+    if not java_path or java_path == "java":
+        return
+    bin_dir = os.path.dirname(java_path)
+    jdk_home = os.path.dirname(bin_dir)
+    cur_home = os.environ.get("JAVA_HOME", "")
+    home_ok = cur_home and os.path.isfile(os.path.join(cur_home, "bin", "java.exe"))
+    if not home_ok:
+        os.environ["JAVA_HOME"] = jdk_home
+    if bin_dir not in os.environ.get("PATH", ""):
+        os.environ["PATH"] = bin_dir + os.pathsep + os.environ.get("PATH", "")
+
+
+_inject_java_env()
 
 # ---------------------------------------------------------------------------
 # 1. 状态与环境工具
@@ -435,7 +496,13 @@ def seep_r2_diff(file_a: str, file_b: str, mode: str = "code") -> str:
         "stats": "-s"
     }
     flag = flag_map.get(mode.lower(), "-C")
-    out = _run_cmd([RADIFF2_EXE, flag, os.path.abspath(file_a), os.path.abspath(file_b)], timeout=60)
+    args = [RADIFF2_EXE, flag]
+    # 修复：-C（函数代码比对）依赖已完成的分析，不加 -A 时 radiff2 直接报
+    # "ERROR: No functions found, try running with -A"，工具永远返回错误。
+    if flag == "-C":
+        args.append("-A")
+    args.append("-q")
+    out = _run_cmd(args + [os.path.abspath(file_a), os.path.abspath(file_b)], timeout=180)
     return _clean_r2_output(out)
 
 @server.tool()
@@ -1016,25 +1083,101 @@ def seep_auto_triage(target_path: str, task_name: Optional[str] = None) -> str:
 @server.tool()
 def seep_ida_status() -> str:
     """
-    检查本地 IDA Pro 逆向分析服务与 MCP 桥接器是否在线就绪。
-    探测端口 127.0.0.1:13337。
+    检查本地 IDA Pro 与**官方 Hex-Rays ida-mcp** 的就绪状态。
+
+    注意：官方 server 不再有固定端口（旧的 127.0.0.1:13337 已作废）。
+    它靠 ida-nexus 在 %APPDATA%\\Hex-Rays\\IDA Pro\\nexus\\instances\\*.json 里
+    登记活着的后端，端口每次随机；而且无 GUI 也能干活（open_database 自起 idalib worker）。
+    本工具只做环境体检，真正的握手请用 ida-reverse 技能（SKILL §1）。
     """
-    import urllib.request
-    url = "http://127.0.0.1:13337"
-    try:
-        req = urllib.request.Request(url, method="GET")
-        with urllib.request.urlopen(req, timeout=2) as resp:
-            return json.dumps({
-                "status": "Online",
-                "code": resp.status,
-                "message": "IDA Pro MCP 服务正在稳定运行！可直接调用 mcp_ida_* 工具链展开反编译与交叉引用深度分析。"
-            }, indent=2, ensure_ascii=False)
-    except Exception as e:
-        return json.dumps({
-            "status": "Offline / Unreachable",
-            "detail": str(e),
-            "hint": "若需使用 IDA 深度分析，请在 IDA Pro GUI 中确认插件已加载，或按下 Ctrl+Alt+M 唤醒。"
-        }, indent=2, ensure_ascii=False)
+    import glob
+    appdata = os.environ.get("APPDATA", "")
+    home = os.path.expanduser("~")
+    ida_app = os.path.join(appdata, "Hex-Rays", "IDA Pro")
+    nexus_inst = os.path.join(ida_app, "nexus", "instances")
+
+    result = {"server": "official ida-mcp (Hex-Rays)", "ready": False, "checks": {}}
+
+    # 1) IDA 本体
+    ida_root = None
+    cfg = os.path.join(ida_app, "ida-config.json")
+    if os.path.isfile(cfg):
+        try:
+            with open(cfg, encoding="utf-8") as f:
+                ida_root = (json.load(f).get("Paths") or {}).get("ida-install-dir")
+        except Exception:
+            ida_root = None
+    if not ida_root or not os.path.isdir(ida_root):
+        for base in ("D:\\Program Files", "C:\\Program Files", "D:\\Program Files (x86)", "C:\\Program Files (x86)"):
+            hit = sorted(glob.glob(os.path.join(base, "IDA*")))
+            for d in hit:
+                if os.path.isfile(os.path.join(d, "ida.exe")):
+                    ida_root = d
+                    break
+            if ida_root:
+                break
+    result["checks"]["ida_root"] = ida_root or "MISSING（IDA Pro 为商业软件，需自备授权）"
+    result["checks"]["idalib"] = bool(ida_root and os.path.isdir(os.path.join(ida_root, "idalib")))
+
+    # 2) uvx（官方 server 的启动器；MCP 里必须写绝对路径）
+    uvx = shutil.which("uvx") or shutil.which("uvx.exe")
+    if not uvx:
+        pats = [
+            os.path.join(os.environ.get("LOCALAPPDATA", ""), "Programs", "Python", "Python*", "Scripts", "uvx.exe"),
+            os.path.join(home, ".local", "bin", "uvx.exe"),
+            "D:\\Program Files\\Python\\Python*\\Scripts\\uvx.exe",
+            "C:\\Program Files\\Python*\\Scripts\\uvx.exe",
+        ]
+        for p in pats:
+            g = sorted(glob.glob(p))
+            if g:
+                uvx = g[0]
+                break
+    result["checks"]["uvx"] = uvx or "MISSING（pip install uv）"
+
+    # 3) GUI 插件（只有「人眼复核」模式需要）
+    plugin = os.path.join(ida_app, "plugins", "ida-mcp", "ida-plugin.json")
+    result["checks"]["gui_plugin"] = "installed" if os.path.isfile(plugin) else \
+        "absent（可选：无头 idalib 模式不需要，见 SKILL §7）"
+
+    # 4) nexus 在线后端
+    backends = []
+    for f in sorted(glob.glob(os.path.join(nexus_inst, "*.json"))):
+        try:
+            with open(f, encoding="utf-8") as fh:
+                j = json.load(fh)
+            backends.append({"pid": j.get("pid"), "backend": j.get("backend"),
+                             "port": j.get("port"), "exe_path": j.get("exe_path")})
+        except Exception:
+            backends.append({"file": os.path.basename(f), "note": "occupied"})
+    result["checks"]["nexus_backends_online"] = backends
+
+    # 5) agent 侧注册是否已迁到官方写法
+    for label, path in (("pi", os.path.join(home, ".pi", "agent", "mcp.json")),
+                        ("qoder", os.path.join(home, ".qoder", "settings.json"))):
+        if not os.path.isfile(path):
+            continue
+        try:
+            with open(path, encoding="utf-8") as f:
+                entry = (json.load(f).get("mcpServers") or {}).get("ida")
+            if not entry:
+                result["checks"][label + "_entry"] = "absent"
+                continue
+            blob = json.dumps(entry, ensure_ascii=False)
+            stale = ("ida_pro_mcp" in blob) or ("13337" in blob)
+            result["checks"][label + "_entry"] = (
+                "STALE(mrexodia)" if stale else "official")
+            if not stale:
+                result["ready"] = True
+        except Exception as e:
+            result["checks"][label + "_entry"] = "parse error: %s" % e
+
+    result["hint"] = (
+        "ready=true 时直接在 agent 里调 ida 的 open_database{path} 即可（无 GUI 也行）。"
+        "若为 false：先跑 setup\\install-ida.ps1，再用 "
+        "Tool\\scripts\\ida_ensure_ready.ps1 -Status / -Target <二进制> 自检与握手。"
+    )
+    return json.dumps(result, indent=2, ensure_ascii=False)
 
 
 @server.tool()

@@ -142,13 +142,13 @@ metadata:
 | :--- | :--- | :--- | :--- |
 | **Skill** | softseep（本体） | 本文件 + `references/` | 总控 + Windows 战术 |
 | | **apkseep** | `~/.pi/agent/skills/apkseep/SKILL.md` | Android APK/DEX/SO 全链路 |
-| | **ida-reverse** | `~/.pi/agent/skills/ida-reverse/SKILL.md` | IDA 自动唤醒 + 联动 |
+| | **ida-reverse** | `~/.pi/agent/skills/ida-reverse/SKILL.md` | 官方 ida-mcp（6 工具 + ida-domain），无 GUI 可跑 |
 | | client-license-validation-bypass | `Tool/client-license-validation-bypass/SKILL.md` | 许可校验专项 |
 | | Tool/safe/skills（5 个） | `Tool/safe/skills/` | radare2 / reverse-engineering / mcp-js-reverse-playbook 等 |
-| **MCP** | **seep**（22 工具） | `seep_r2_*` / `seep_apk_*` / `seep_kb_*` | 二进制 + APK + 知识库 |
-| | **ida**（~243 工具） | `mcp_ida_*` | 深度反编译 / 交叉引用 |
+| **MCP** | **seep**（23 工具） | `seep_r2_*` / `seep_apk_*` / `seep_kb_*` | 二进制 + APK + 知识库 |
+| | **ida**（6 工具） | `open_database` · `execute_python` · `reference` · `list_databases` · `save_database` · `close_database` | 官方 Hex-Rays ida-mcp；分析代码写在 execute_python 里 |
 | | **playwright** | 浏览器工具 | Web / JS 审计 |
-| **脚本** | `Tool/scripts/` | `case-init.ps1` / `trigger_ida_mcp.ps1` / `refresh-tool-index.ps1` | 建档 / IDA 唤醒 / 自检 |
+| **脚本** | `Tool/scripts/` | `case-init.ps1` / `ida_ensure_ready.ps1` / `ida_mcp_handshake.py` / `refresh-tool-index.ps1` | 建档 / IDA 就绪自检与无头拉起 / ida-mcp 握手自检 / 工具链自检 |
 | | `Tool/scripts/apk/` | `decode.ps1` / `rebuild-sign-install.ps1` / `frida-run.ps1` | APK 三件套 |
 | **知识库** | reverselab | `Tool/reverselab/kb/`（316 文件） | 攻防方法论 |
 | | seep KB | `seep_kb_search` / `_read` / `_checklist` / `_payloads` | 在线检索 |
@@ -165,7 +165,7 @@ metadata:
 
 1. **门控不可绕过**：先 G-Auth → 再平台判型 → 再类型判型 → 再子能力；
 2. **子 Skill 加载后其纪律同样生效**：apkseep 的 G1-G4 门、ida-reverse 的唤醒规约，与本文件同等强制；
-3. **MCP 优先于手动**：有 `seep_*` / `mcp_ida_*` 工具就用工具，不手搓命令；
+3. **MCP 优先于手动**：有 `seep_*` 就用 `seep_*`，IDA 侧就用 `open_database` + `execute_python`，不手搓命令行；
 4. **知识库优先于从零手写**：先 `seep_kb_search` 查方法论与现成代码。
 
 ---

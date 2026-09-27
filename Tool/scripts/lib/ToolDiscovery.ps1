@@ -123,19 +123,33 @@ function Get-ReverseToolCatalog {
             )
         }
         [pscustomobject]@{
+            Name = 'ida-mcp'
+            Skill = 'ida-reverse'
+            Purpose = '官方 Hex-Rays IDA MCP（由 uvx 拉起，无固定端口）'
+            FixedVersion = '20260924.0.3'
+            VersionArgs = @('--help')
+            Fallbacks = @(
+                # server 靠 uvx 按需启动，所以「装没装」等价于「uvx 在不在 + 插件/依赖在不在」
+                [pscustomobject]@{ Type = 'command'; Value = 'uvx' },
+                [pscustomobject]@{ Type = 'command'; Value = 'uvx.exe' },
+                [pscustomobject]@{ Type = 'path'; Value = (Join-ReverseOptionalPath -Path $localAppData -ChildPath 'Programs\Python\Python314\Scripts\uvx.exe') },
+                [pscustomobject]@{ Type = 'path'; Value = (Join-ReverseOptionalPath -Path $localAppData -ChildPath 'Programs\Python\Python312\Scripts\uvx.exe') },
+                [pscustomobject]@{ Type = 'path'; Value = (Join-Path $userProfile '.local\bin\uvx.exe') },
+                [pscustomobject]@{ Type = 'path'; Value = 'D:\Program Files\Python\Python314\Scripts\uvx.exe' },
+                [pscustomobject]@{ Type = 'path'; Value = 'C:\Program Files\Python314\Scripts\uvx.exe' },
+                # GUI 插件（可选，仅人眼复核模式需要）
+                [pscustomobject]@{ Type = 'path'; Value = (Join-ReverseOptionalPath -Path $appData -ChildPath 'Hex-Rays\IDA Pro\plugins\ida-mcp\ida-plugin.json') }
+            )
+        }
+        [pscustomobject]@{
             Name = 'ida-pro-mcp'
             Skill = 'ida-reverse'
-            Purpose = 'IDA Pro MCP CLI / 插件安装器'
+            Purpose = '[已废弃] mrexodia 版 IDA MCP；保留仅为历史索引兼容'
             FixedVersion = 'v0.5.0'
             VersionArgs = @('--help')
             Fallbacks = @(
                 [pscustomobject]@{ Type = 'command'; Value = 'ida-pro-mcp' },
-                [pscustomobject]@{ Type = 'path'; Value = (Join-Path $userProfile 'Tools\bin\ida-pro-mcp.cmd') },
-                [pscustomobject]@{ Type = 'path'; Value = (Join-ReverseOptionalPath -Path $localAppData -ChildPath 'Python\pythoncore-3.14-64\Scripts\ida-pro-mcp.exe') },
-                [pscustomobject]@{ Type = 'path'; Value = (Join-ReverseOptionalPath -Path $localAppData -ChildPath 'Programs\Python\Python314\Scripts\ida-pro-mcp.exe') },
-                [pscustomobject]@{ Type = 'path'; Value = (Join-ReverseOptionalPath -Path $localAppData -ChildPath 'Programs\Python\Python312\Scripts\ida-pro-mcp.exe') },
-                [pscustomobject]@{ Type = 'path'; Value = (Join-Path $userProfile 'Desktop\IDA Pro 9.4\App\IDA Pro\Python314\Scripts\ida-pro-mcp.exe') },
-                [pscustomobject]@{ Type = 'path'; Value = (Join-Path ([Environment]::GetFolderPath('Desktop')) 'IDA Pro 9.4\App\IDA Pro\Python314\Scripts\ida-pro-mcp.exe') }
+                [pscustomobject]@{ Type = 'path'; Value = (Join-Path $userProfile 'Tools\bin\ida-pro-mcp.cmd') }
             )
         }
         [pscustomobject]@{
@@ -146,9 +160,13 @@ function Get-ReverseToolCatalog {
             VersionArgs = @()
             Fallbacks = @(
                 [pscustomobject]@{ Type = 'command'; Value = 'ida' },
+                # 本机实测：IDA 根由 %APPDATA%\Hex-Rays\IDA Pro\ida-config.json 记录
+                [pscustomobject]@{ Type = 'path'; Value = 'D:\Program Files\IDA Professional 9.4\ida.exe' },
+                [pscustomobject]@{ Type = 'path'; Value = 'D:\Program Files\IDA Pro 9.4\ida.exe' },
                 [pscustomobject]@{ Type = 'path'; Value = 'C:\Program Files\IDA Professional 9.4\ida.exe' },
                 [pscustomobject]@{ Type = 'path'; Value = 'C:\Program Files\IDA Pro 9.4\ida.exe' },
                 [pscustomobject]@{ Type = 'path'; Value = 'C:\Program Files\IDA Pro\ida.exe' },
+                [pscustomobject]@{ Type = 'path'; Value = (Join-ReverseOptionalPath -Path $appData -ChildPath '..\Local\Programs\IDA*\ida.exe') },
                 [pscustomobject]@{ Type = 'path'; Value = (Join-Path $userProfile 'Desktop\IDA Pro 9.4\App\IDA Pro\ida.exe') },
                 [pscustomobject]@{ Type = 'path'; Value = (Join-Path ([Environment]::GetFolderPath('Desktop')) 'IDA Pro 9.4\App\IDA Pro\ida.exe') },
                 [pscustomobject]@{ Type = 'path'; Value = (Join-Path $userProfile 'Tools\IDA Pro 9.4\App\IDA Pro\ida.exe') }

@@ -33,14 +33,14 @@
 | radare2 / jadx / apktool | 从 GitHub 下载解压到 `Tool/mcp/Tool/safe/` |
 | playwright-mcp | `npm i @playwright/mcp` |
 | js-reverse-mcp | 源码 + `npm install && npm run build` |
-| ida-pro-mcp | `pip install ida-pro-mcp` |
+| ida-mcp（官方） | `install-ida.ps1`：uv/uvx 探测 + `pip install ida-nexus` + 装 GUI 插件 + 写 mcp.json |
 | pi 扩展包（12 个） | `pi update --extensions` |
 
 ---
 
 ## 手动下载清单（脚本失败时用）
 
-若 `install-tools.ps1` 因网络问题失败，手动下载后放到对应位置：
+若 `repair-tools.ps1` 因网络问题失败，手动下载后放到对应位置：
 
 | 工具 | 下载地址 | 放到 |
 | :--- | :--- | :--- |
@@ -48,7 +48,10 @@
 | **radare2** | https://github.com/radareorg/radare2/releases （Windows zip） | `Tool/mcp/Tool/safe/radare2/` |
 | **apktool** | https://github.com/iBotPeaches/Apktool/releases （`apktool_x.x.x.jar`） | `Tool/mcp/Tool/safe/apktool/` |
 | **playwright-mcp** | `npm i -g @playwright/mcp` | 全局即可 |
-| **ida-pro-mcp** | https://github.com/mrexodia/ida-pro-mcp | `Tool/mcp/Tool/safe/ida-pro-mcp/` |
+| **uv / uvx**（官方 ida-mcp 启动器） | https://astral.sh/uv （`irm https://astral.sh/uv/install.ps1 \| iex`） | 装到 PATH，`mcp.json` 里写绝对路径 |
+| **ida-nexus** | `pip install "ida-nexus>=0.13.0"`（装进 **IDA 自带的 python311**） | IDA 插件运行时 |
+| **官方 ida-mcp 插件** | 包内自带 `Tool/mcp/Tool/safe/ida-mcp-plugin/` | 拷到 `%APPDATA%\Hex-Rays\IDA Pro\plugins\` |
+| ~~ida-pro-mcp~~（mrexodia，已废弃） | https://github.com/mrexodia/ida-pro-mcp | 不要再注册进 mcp.json，见 `MANUAL\IDA-PRO.md` |
 
 ### apktool 的 `.bat` 封装（手动装时需要）
 
@@ -67,7 +70,7 @@ if "%JAVA_HOME%"=="" (set JAVA=java) else (set JAVA="%JAVA_HOME%\bin\java.exe")
 | 现象 | 处理 |
 | :--- | :--- |
 | GitHub 下载超时 | 脚本会自动回退镜像 `ghproxy.net` / `gh-proxy.com` |
-| 全部镜像都失败 | 用上面的手动清单，或配置代理后重跑 `install-tools.ps1` |
+| 全部镜像都失败 | 用上面的手动清单，或配置代理后重跑 `repair-tools.ps1` |
 | `pip` 装不上 | 加国内源：`pip install -i https://pypi.tuna.tsinghua.edu.cn/simple <包名>` |
 | `npm` 装不上 | 换源：`npm config set registry https://registry.npmmirror.com` |
 

@@ -1,4 +1,4 @@
-$targetDll = "<本地路径>"
+﻿$targetDll = "<本地路径>"
 $artifactDll = "<本地路径>"
 
 Write-Host "[*] 正在平稳清理占用进程..." -ForegroundColor Cyan

@@ -35,3 +35,15 @@ $RECYCLE.BIN/
 # Node.js
 # Note: Root level node_modules should not exist, and safe/ modules are already compressed to .zip
 node_modules/
+
+# Local reverse-engineering lab (targets, PoC binaries, evidence) - local only
+lab/
+
+# Agent session artifacts
+# (qoder.md and .qoder/settings.json are published on purpose: README references them)
+.claude/
+.pi-traces/
+
+# Generated copies; canonical index lives in Tool/docs
+/Tool/tool-index.json
+/Tool/tool-index.md

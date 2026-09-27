@@ -13,7 +13,7 @@
 
 | 类别 | 组件 | 处理方式 |
 | :--- | :--- | :--- |
-| ✅ **已内置** | jadx · radare2 · apktool · playwright-mcp · js-reverse-mcp · ida-pro-mcp · hook-mcp | 随包提供，解压即用 |
+| ✅ **已内置** | jadx · radare2 · apktool · playwright-mcp · js-reverse-mcp · ida-mcp-plugin（官方 IDA 桥）· hook-mcp | 随包提供，解压即用 |
 | 🔴 **需自备** | **IDA Pro 本体**（商业授权） | 见 `MANUAL/IDA-PRO.md` |
 | 🔴 **需自填** | 模型 API 密钥 · playwright token | 由你自行配置（本包不含凭据） |
 | ⚙️ **需 pip 装** | `mcp` · `pytest` · `frida-tools` | `install-python.ps1` 自动 |
@@ -29,7 +29,8 @@
 | 3 | **apktool** | GitHub `iBotPeaches/Apktool` | `Tool/mcp/Tool/safe/apktool/` | 24 MB |
 | 4 | **playwright-mcp** | npm `@playwright/mcp` | `Tool/mcp/Tool/safe/playwright-mcp/` | 45 MB |
 | 5 | **js-reverse-mcp** | npm `js-reverse-mcp` | `Tool/mcp/Tool/safe/js-reverse-mcp/` | 234 MB |
-| 6 | **ida-pro-mcp** | PyPI `ida-pro-mcp` | `Tool/mcp/Tool/safe/ida-pro-mcp/` | 79 MB |
+| 6 | **ida-mcp-plugin** | GitHub `HexRaysSA/ida-mcp` | `Tool/mcp/Tool/safe/ida-mcp-plugin/` | 13 KB |
+| 6b | ~~ida-pro-mcp~~（旧版，已废弃保留） | PyPI `ida-pro-mcp` | `Tool/mcp/Tool/safe/ida-pro-mcp/` | 79 MB |
 | 7 | **hook-mcp** | 自研 | `Tool/mcp/Tool/safe/hook-mcp/` | 331 KB |
 | | | | **合计** | **≈ 880 MB** |
 
@@ -44,8 +45,8 @@ IDA Pro **不随包分发**。两种处理：
 
 | 方案 | 操作 |
 | :--- | :--- |
-| **已有授权** | 跑 `setup\install-ida.ps1`（自动探测 + 装 ida-pro-mcp + 写配置） |
-| **无授权** | 用免费替代：`seep_r2_*`（Radare2 八件套）+ Ghidra —— 见 `MANUAL/IDA-PRO.md` |
+| **已有授权** | 跑 `setup\install-ida.ps1`（探测 IDA + 装 ida-nexus 与官方插件 + 写 mcp.json） |
+| **无授权** | 用免费替代：`seep_r2_*`（Radare2 十件套）+ Ghidra —— 见 `MANUAL/IDA-PRO.md` |
 
 > **IDA 缺失不会阻塞任务** —— agent 会自动降级到 `seep_r2_*` 并标注“未使用 IDA 反编译器”。
 
@@ -153,17 +154,23 @@ npm:pi-goal-x
 
 > **优点**：零下载、零磁盘占用。首次调用时 npx 自动拉取。
 
-### 6. ida-pro-mcp — IDA 桥接
+### 6. ida-mcp — 官方 IDA 桥（Hex-Rays 出品）
 
 | 项 | 值 |
 | :--- | :--- |
-| **上游** | https://github.com/mrexodia/ida-pro-mcp |
-| **PyPI** | https://pypi.org/project/ida-pro-mcp/ |
-| **实测版本** | **1.4.0** |
-| **安装** | `pip install ida-pro-mcp` |
-| **目标** | Python site-packages |
-| **服务的工具** | `mcp_ida_*`（~243 个） |
-| **⚠️ 前置** | **需自备 IDA Pro**（见 `MANUAL/IDA-PRO.md`） |
+| **上游** | https://github.com/HexRaysSA/ida-mcp |
+| **PyPI** | `ida-mcp`（由 `uvx` 按需拉取，不必预装） |
+| **实测版本** | **20260924.0.3** |
+| **启动** | `<uvx 绝对路径>` `ida-mcp stdio --agent=<名字>` |
+| **GUI 插件** | 包内自带 `Tool/mcp/Tool/safe/ida-mcp-plugin/ida-mcp-plugin-20260924.0.3.zip` |
+| **插件安装到** | `%APPDATA%\Hex-Rays\IDA Pro\plugins\` |
+| **插件运行时依赖** | `ida-nexus>=0.13.0`（装进 IDA 自带的 `python311`） |
+| **提供的工具** | 6 个：`open_database` · `execute_python` · `reference` · `list_databases` · `save_database` · `close_database` |
+| **后端** | idalib（无头，按需拉起）/ gui（附加到已开 IDA） |
+| **⚠️ 前置** | **需自备 IDA Pro ≥ 9.4 + Python ≥ 3.11**（见 `MANUAL/IDA-PRO.md`） |
+
+> **已废弃**：mrexodia `ida-pro-mcp`（66 工具 / `127.0.0.1:13337` / Ctrl+Alt+M 唤醒）。
+> 目录 `Tool/mcp/Tool/safe/ida-pro-mcp/` 仅作历史保留，**不要再注册进 mcp.json**。
 
 ---
 
@@ -226,7 +233,7 @@ pi install npm:pi-mcp-extension
 
 ## 六、镜像回退策略
 
-`install-tools.ps1` 内置三级回退（**按顺序尝试**）：
+`repair-tools.ps1` 内置三级回退（**按顺序尝试**）：
 
 ```
 1. 官方源          https://github.com/...          （直连）
@@ -253,7 +260,9 @@ pi install npm:pi-mcp-extension
 | **jadx** | https://github.com/skylot/jadx/releases → `jadx-x.x.x.zip` | `Tool/mcp/Tool/safe/jadx/` | 解压后 `bin/jadx.bat` 应在 |
 | **radare2** | https://github.com/radareorg/radare2/releases → `radare2-x.x.x-w64.zip` | `Tool/mcp/Tool/safe/radare2/` | 解压后 `bin/radare2.exe` 应在 |
 | **apktool** | https://github.com/iBotPeaches/Apktool/releases → `apktool_x.x.x.jar` | `Tool/mcp/Tool/safe/apktool/apktool.jar` | 需另建 `apktool.bat` |
-| **ida-pro-mcp** | `pip install ida-pro-mcp` | Python site-packages | — |
+| **ida-nexus** | `& "<IDA>\python311\python.exe" -m pip install "ida-nexus>=0.13.0"` | IDA 的 site-packages | 官方插件依赖 |
+| **官方 ida-mcp 插件** | 包内 `ida-mcp-plugin-20260924.0.3.zip` | `%APPDATA%\Hex-Rays\IDA Pro\plugins\` | 或由 `install-ida.ps1` 自动装 |
+| **uv / uvx** | https://astral.sh/uv | 加入 PATH | 官方 MCP 的启动器 |
 | **playwright-mcp** | `npm i @playwright/mcp` | `Tool/mcp/Tool/safe/playwright-mcp/` | 或用 npx |
 
 ### apktool 的 `.bat` 内容（手动装时需要）
@@ -301,7 +310,7 @@ powershell -ExecutionPolicy Bypass -File .\verify.ps1
 | 现象 | 处理 |
 | :--- | :--- |
 | GitHub API 超时 | 脚本会报 `无法获取 release 信息`，改用镜像或手动下载 |
-| 下载中断 | 重跑 `install-tools.ps1`（已存在的会跳过） |
+| 下载中断 | 重跑 `repair-tools.ps1`（已存在的会跳过） |
 | `pip` 慢 | `pip install -i https://pypi.tuna.tsinghua.edu.cn/simple <包>` |
 | `npm` 慢 | `npm config set registry https://registry.npmmirror.com` |
 | 全部失败 | 按 §七 手动下载，放到对应目录 |
@@ -313,10 +322,10 @@ powershell -ExecutionPolicy Bypass -File .\verify.ps1
 | 阶段 | 增量 |
 | :--- | :--- |
 | 解压本包 | 16 MB |
-| 装工具（jadx 460 + r2 39 + apktool 24 + playwright 45 + ida-pro-mcp 1） | ~570 MB |
+| 装工具（jadx 460 + r2 39 + apktool 24 + playwright 45 + ida-mcp 插件 <1） | ~570 MB |
 | Python 依赖（mcp + pytest + frida-tools） | ~50 MB |
 | pi 扩展包（12 个） | ~80 MB |
 | **合计** | **≈ 700 MB** |
 
 > 若只装核心链路（**跳过 jadx**）：可省 460 MB。
-> 命令：`powershell -File .\install-tools.ps1 -Only radare2,apktool,ida-pro-mcp`
+> 命令：`powershell -File .\repair-tools.ps1 -Only radare2,apktool,ida-mcp`

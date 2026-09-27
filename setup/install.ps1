@@ -90,9 +90,9 @@ if ($OnlyVerify) {
 }
 
 # 首次部署：解压 node_modules / venv（GitHub clone 后只需一次）
+# 注：ida-pro-mcp\.venv 已从触发条件移除 —— IDA 桥已换成官方 ida-mcp（uvx 按需拉起，无需本地 venv）
 if (-not (Test-Path (Join-Path $Root 'Tool\mcp\Tool\safe\js-reverse-mcp\node_modules')) -or
-    -not (Test-Path (Join-Path $Root 'Tool\mcp\Tool\safe\playwright-mcp\node_modules')) -or
-    -not (Test-Path (Join-Path $Root 'Tool\mcp\Tool\safe\ida-pro-mcp\.venv'))) {
+    -not (Test-Path (Join-Path $Root 'Tool\mcp\Tool\safe\playwright-mcp\node_modules'))) {
     Write-Step '解压依赖包（首次部署）'
     & (Join-Path $ScriptDir 'extract-deps.ps1')
 }

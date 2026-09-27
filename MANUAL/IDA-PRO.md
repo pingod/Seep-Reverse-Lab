@@ -7,34 +7,68 @@
 ## 方案 A：已有 IDA Pro 授权（推荐，功能最全）
 
 ### 支持版本
-IDA Pro **8.4+ / 9.x**（含 Hex-Rays 反编译器）
+
+IDA Pro **9.4+**（官方 `ida-mcp` 插件要求 `idaVersions >= 9.4`、`requiresPython >= 3.11`）
++ Hex-Rays 反编译器。8.x / 9.0–9.3 装不上官方插件，请走下面的「方案 B / C」。
 
 ### 安装后需要做的
 
-1. **确认 Python 运行时存在**（IDA 自带）：
+> 一句话版：跑 `setup\install-ida.ps1`，它把四件事全做完。下面是它到底装了什么，
+> 便于手工排查。
+
+1. **确认 IDA 自带的 Python 运行时存在**：
    ```
    <IDA安装目录>\python311\python.exe
    ```
+   IDA 根目录不要猜，从 `%APPDATA%\Hex-Rays\IDA Pro\ida-config.json` 的 `IDAPATH` 读。
+   若该文件不存在，用 `<IDA安装目录>\idapyswitch.exe --auto` 绑定一次。
 
-2. **安装 ida-pro-mcp 到 IDA 的 Python**：
+2. **装 `uv` / `uvx`**（官方 MCP 的启动器，必需）：
    ```powershell
-   & "<IDA安装目录>\python311\python.exe" -m pip install ida-pro-mcp
+   powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+   uvx --version
+   ```
+   ⚠️ `mcp.json` 里的 `command` **必须写 uvx 的绝对路径**。Windows 上直接写 `"uvx"`
+   会因 PATHEXT 解析失败报 `FileNotFoundError: [WinError 2]`。
+
+3. **给 IDA 的 Python 装 `ida-nexus`**（插件的运行时依赖）：
+   ```powershell
+   & "<IDA安装目录>\python311\python.exe" -m pip install "ida-nexus>=0.13.0"
    ```
 
-3. **运行 `install.ps1`** —— 它会自动探测 IDA 路径并写入 `mcp.json`。
-   若探测失败，手工填 `~/.pi/agent/mcp.json`：
+4. **装官方 GUI 插件**（`install-ida.ps1` 用的是包内自带的发行包，离线可用）：
+   源文件在 `Tool/mcp/Tool/safe/ida-mcp-plugin/ida-mcp-plugin-20260924.0.3.zip`，
+   安装位置为 `%APPDATA%\Hex-Rays\IDA Pro\plugins\`。
+
+5. **写 `mcp.json`** —— `install-ida.ps1` 会自动替换 `ida` 条目；手工填则：
    ```json
    "ida": {
-     "command": "<IDA安装目录>\\python311\\python.exe",
-     "args": ["<IDA安装目录>\\python311\\Lib\\site-packages\\ida_pro_mcp\\server.py"],
+     "command": "C:\\...\\Scripts\\uvx.exe",
+     "args": ["ida-mcp", "stdio", "--agent=pi"],
+     "env": { "PYTHONIOENCODING": "utf-8" },
      "transport": "stdio",
      "lifecycle": "eager",
-     "requestTimeoutMs": 180000
+     "requestTimeoutMs": 420000
    }
    ```
+   `requestTimeoutMs` 不能小于 420000 —— `execute_python` 服务端默认超时就是 360 s。
 
-4. **使用方式**：在 pi 里说「用 IDA 分析这个文件」，`ida-reverse` Skill 会自动唤醒 IDA 并挂载 MCP
-   （轮询 `http://127.0.0.1:13337` 就绪）。
+6. **验证**（别靠"目录在不在"判断，一定要真握手）：
+   ```powershell
+   python Tool\scripts\ida_mcp_handshake.py            # 纯预检 + 真实 JSON-RPC 握手
+   powershell -File Tool\scripts\ida_ensure_ready.ps1 -Status
+   ```
+   握手成功会打印 `SERVER ida <版本>` / `TOOLS 6 个` / `OPEN ...` / `READY` / 函数与字符串计数。
+
+7. **使用方式**：在 pi 里说「用 IDA 分析这个文件」，`ida-reverse` Skill 走的是
+   `open_database` → `reference` → `execute_python`，**不需要开 IDA 图形界面**
+   （idalib 无头后端按需自己拉起来）。
+
+> **旧版说明**：本包早期文档写的 mrexodia `ida-pro-mcp`（66 工具 / `127.0.0.1:13337` /
+> Ctrl+Alt+M 唤醒）已被官方实现取代。`Tool/mcp/Tool/safe/ida-pro-mcp/` 仅作历史保留，
+> **不要再注册进 mcp.json**；`Tool/scripts/trigger_ida_mcp.ps1` 已改为提示已废弃的空壳。
+> 战术细节见 `Tool/skill/ida-reverse/SKILL.md`（v3）。
+
 
 ### 购买渠道
 - 官方：https://hex-rays.com/ida-pro

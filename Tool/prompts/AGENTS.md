@@ -1,4 +1,4 @@
-# AGENTS.md — 跨 Agent 通用作战协议（Codex / Claude Code / OpenCode / DeepSeek Harness / pi）
+# AGENTS.md — 跨 Agent 通用作战协议（Codex / Claude Code / OpenCode / DeepSeek Harness / Qoder / pi）
 
 > 本文件是**跨 agent 通用版**执行协议，Codex、DeepSeek Harness、OpenCode 原生读取项目根 `AGENTS.md`，Claude Code 读取 `CLAUDE.md`。
 > **所有核心状态靠磁盘文件，不靠长文本上下文记忆**，切换模型 / 长上下文 / 换会话均不丢失。

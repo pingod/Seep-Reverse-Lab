@@ -152,9 +152,10 @@ byte[] decrypted = emu.readMemory(outputAddress, length);
 ```
 
 ### MCP Commands
-- Recon: `list_functions`, `list_imports`, `list_strings`
-- Analysis: `decompile_function`, `get_xrefs_to`
-- Annotation: `rename_function`, `rename_variable`
+（工具名以 ida-pro-mcp 2.0.0 实测为准，共 66 个；完整清单见 `Tool/skill/ida-reverse/SKILL.md` §4）
+- Recon: `list_funcs`, `imports`, `find_regex`（字符串）, `survey_binary`
+- Analysis: `decompile`, `disasm`, `xrefs_to`, `callees`, `analyze_function`
+- Annotation: `rename`（批量）, `set_comments`
 
 ---
 

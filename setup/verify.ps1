@@ -213,6 +213,24 @@ Test-CheckItem "运行时" "Python 解释器 (3.11+ 且可执行)" {
     $py -ne $null
 } "系统未安装 Python 或未加入 PATH 环境变量，请安装 Python 3.11+"
 
+Test-ManualItem "运行时" "Java 运行时 (jadx / apktool 的硬依赖)" {
+    # 上面的 jadx / apktool 检查只验证文件是否存在；这两个工具都是 JVM 程序，
+    # 没有可用的 java 时文件齐全也照样跑不起来，所以这里单独做真实探测。
+    $ok = $false
+    $j = Get-Command java -ErrorAction SilentlyContinue
+    if ($j) {
+        & java -version 2>&1 | Out-Null
+        if ($LASTEXITCODE -eq 0) { $ok = $true }
+    }
+    if (-not $ok) {
+        foreach ($jh in @($env:JAVA_HOME, [Environment]::GetEnvironmentVariable('JAVA_HOME','User'),
+                                 [Environment]::GetEnvironmentVariable('JAVA_HOME','Machine'))) {
+            if ($jh -and (Test-Path (Join-Path $jh 'bin\java.exe'))) { $ok = $true; break }
+        }
+    }
+    $ok
+} "系统没有可用的 Java：PATH 中找不到 java，且 JAVA_HOME 指向的目录不存在。jadx 与 apktool 目前无法运行（Android/apkseep 链路会失败）。装一个 JDK 17 后即可，例如：winget install EclipseAdoptium.Temurin.17.JDK"
+
 Test-ManualItem "协议" "Python mcp 协议库环境支持 (mcp>=1.20,<1.29)" {
     $py = Get-Command python -ErrorAction SilentlyContinue
     if ($py) {
@@ -223,11 +241,48 @@ Test-ManualItem "协议" "Python mcp 协议库环境支持 (mcp>=1.20,<1.29)" {
 
 Test-ManualItem "商业软件" "IDA Pro 商业反编译器协同 (需自备独立授权)" {
     $found = $false
-    foreach ($c in @('D:\Tool\IDA Pro', 'C:\Program Files\IDA Pro', 'C:\Program Files\IDA Professional 9.0', 'C:\IDA Pro')) {
+    $cands = @('D:\Program Files', 'C:\Program Files', 'D:\Tool\IDA Pro', 'C:\Program Files\IDA Pro', 'C:\IDA Pro')
+    # 兼容把 IDA 直接放在工作台根目录下的情况（如 "<Root>\IDA Pro 9.4"）
+    $cands += @(Get-ChildItem -Path $Root -Directory -ErrorAction SilentlyContinue |
+        Where-Object { $_.Name -like 'IDA*' } | ForEach-Object { $_.FullName })
+    foreach ($c in $cands) {
+        if (-not $c -or -not (Test-Path $c)) { continue }
         if (Test-Path (Join-Path $c 'ida.exe')) { $found = $true; break }
+        $sub = Get-ChildItem -Path $c -Directory -Filter 'IDA*' -ErrorAction SilentlyContinue |
+            ForEach-Object { Join-Path $_.FullName 'ida.exe' } |
+            Where-Object { Test-Path $_ } | Select-Object -First 1
+        if ($sub) { $found = $true; break }
+    }
+    # 只要 mcp.json 里的 ida 条目 command 指向真实存在的文件，就算已接入
+    if (-not $found) {
+        $mcp = Join-Path $env:USERPROFILE '.pi\agent\mcp.json'
+        if (Test-Path $mcp) {
+            try {
+                $cmd = ((Get-Content $mcp -Raw) | ConvertFrom-Json).mcpServers.ida.command
+                if ($cmd -and (Test-Path $cmd)) { $found = $true }
+            } catch { }
+        }
     }
     $found
 } "未检测到本地 IDA Pro，如无授权不影响核心链路，可阅读 MANUAL\IDA-PRO.md 使用 Radare2 自动降级"
+
+Test-ManualItem "商业软件" "官方 ida-mcp 接线正确 (uvx + GUI 插件 + ida-nexus)" {
+    $ok = $true
+    $mcp = Join-Path $env:USERPROFILE '.pi\agent\mcp.json'
+    if (Test-Path $mcp) {
+        try {
+            $e = ((Get-Content $mcp -Raw) | ConvertFrom-Json).mcpServers.ida
+            $blob = ($e.command + ' ' + ($e.args -join ' '))
+            if ($blob -match 'ida_pro_mcp|13337') { $ok = $false }        # 仍是 mrexodia 旧写法
+            if (-not ($e.args -contains 'ida-mcp')) { $ok = $false }
+            if ($e.requestTimeoutMs -lt 420000) { $ok = $false }
+        } catch { $ok = $false }
+    } else { $ok = $false }
+    # GUI 模式（人眼复核）才需要插件；无头 idalib 不需要，所以这里只作告警不判失败
+    $plugin = Join-Path $env:APPDATA 'Hex-Rays\IDA Pro\plugins\ida-mcp\ida-plugin.json'
+    if (-not (Test-Path $plugin)) { Write-Host '      (提示) 未装 GUI 插件，无头模式仍可用' -ForegroundColor DarkGray }
+    $ok
+} "ida 条目仍是旧 mrexodia 写法/超时过小，跑 setup\install-ida.ps1 自动改写"
 
 Test-ManualItem "配置" "Claude Code 项目级 MCP 注册 (.mcp.json 在根目录)" {
     Test-Path (Join-Path $Root '.mcp.json')

@@ -9,7 +9,7 @@
 4. **全流程复盘模板（时间线/攻克点/踩坑/证据链）**：`项目C/poc/TASK_RETRO.md`
 5. **自动化任务沙盒建档**：`Tool/scripts/case-init.ps1`
 6. **工具链健康自检**：`Tool/scripts/refresh-tool-index.ps1`
-7. **IDA Pro 自动化 MCP 链路**：`Tool/scripts/trigger_ida_mcp.ps1`
+7. **IDA 自动化链路（官方 Hex-Rays ida-mcp，6 工具）**：环境自检 + 无头拉起用 `Tool/scripts/ida_ensure_ready.ps1`；真实握手与工具数验证用 `python Tool/scripts/ida_mcp_handshake.py`。**没有端口轮询**（nexus 后端端口随机）、**不需要 GUI**（idalib 无头后端按需自启）；`Tool/scripts/trigger_ida_mcp.ps1` 已废弃为提示空壳
 8. **跨进程 UI 工装集（可判定验收）**：
    - `tools/ui/abdump.ps1` —— 全量控件布局 + 文本字节 + 样式 dump
    - `tools/ui/linetest.ps1` —— `EM_GETLINECOUNT` 行数判定（LF vs CRLF 探针）

@@ -1,4 +1,4 @@
-# Build 项目GActivate.exe (PyInstaller onefile from src/项目G_activate.py)
+﻿# Build 项目GActivate.exe (PyInstaller onefile from src/项目G_activate.py)
 # Usage: powershell -ExecutionPolicy Bypass -File build.ps1
 $ErrorActionPreference = 'Stop'
 

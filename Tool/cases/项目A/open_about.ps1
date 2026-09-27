@@ -1,4 +1,4 @@
-$src = @'
+﻿$src = @'
 using System;
 using System.Runtime.InteropServices;
 public class Win {

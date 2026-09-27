@@ -62,9 +62,11 @@ plugins:
     config:
       serverName: ida
       transport: stdio
-      command: '<IDA_PYTHON>'
+      command: '<UVX>'            # uvx.exe 绝对路径，见 MANUAL/IDA-PRO.md
       args:
-        - '<IDA_ROOT>/Lib/site-packages/ida_pro_mcp/server.py'
+        - 'ida-mcp'
+        - 'stdio'
+        - '--agent=dsh'
       env:
         PYTHONIOENCODING: utf-8
 ```

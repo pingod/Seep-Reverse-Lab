@@ -154,7 +154,9 @@ Seep\ (251 MB)
 ├── README.md                      ← 全局说明（英文默认）
 ├── README.zh.md                   ← 本文件（中文文档）
 ├── CLAUDE.md                      ← Claude Code 项目级原生指令
-├── .mcp.json                      ← 项目级 MCP 注册文件（Claude Code / OpenCode）
+├── qoder.md                       ← Qoder 项目级原生指令（自动加载）
+├── .mcp.json                      ← 项目级 MCP 注册文件（Claude Code / Qoder / OpenCode）
+├── .qoder\settings.json           ← Qoder 项目级 MCP 启用（自动加载 seep / js-reverse）
 ├── DSH-PROFILE.md                 ← DeepSeek Harness Cordis 插件配置模板
 ├── check.bat                      ← ⭐ 双击一键体检入口（Windows）
 ├── check.ps1                      ← PowerShell 体检入口
@@ -175,7 +177,8 @@ Seep\ (251 MB)
 │   │       │   ├── radare2\       ← 39 MB（v6.2.2 全套）
 │   │       │   ├── apktool\       ← 24 MB（v3.0.3）
 │   │       │   ├── hook-mcp\      ← Frida / LSPosed 动态注入模板
-│   │       │   ├── ida-pro-mcp\   ← IDA 桥接适配层
+│   │       │   ├── ida-mcp-plugin\← 官方 Hex-Rays ida-mcp 插件（IDA ≥ 9.4）
+│   │       │   ├── ida-pro-mcp\   ← ⚠️ 旧版 mrexodia 桥，已废弃保留
 │   │       │   ├── js-reverse-mcp\← Web / JS 调试引擎
 │   │       │   └── playwright-mcp\← 无头浏览器自动化
 │   │       └── reverselab\        ← 289 篇战术笔记 + 攻击链模板
@@ -210,7 +213,7 @@ Seep\ (251 MB)
 | 分类 | 工具 | 核心功能 | 上下文控制 |
 |---|---|---|---|
 | **状态检测** | `seep_status` | Radare2 / JADX / Apktool / KB 就绪检测 | — |
-| | `seep_ida_status` | IDA Pro MCP 服务连通性探测 | — |
+| | `seep_ida_status` | IDA 环境就绪探测（idalib / uvx / GUI 插件 / nexus 后端） | — |
 | **二进制分析** | `seep_r2_info` | 架构 / 位宽 / DEP / ASLR / Canary / PIE | — |
 | | `seep_r2_strings` | 字符串提取 + 正则过滤 | `limit=` |
 | | `seep_r2_functions` | 函数枚举 / 导入导出 / 入口点 | `limit=` |
@@ -259,6 +262,7 @@ powershell -ExecutionPolicy Bypass -File .\install.ps1
 | **Claude Code** | 项目根 `CLAUDE.md` | 项目根 `.mcp.json` | 在工作台根目录执行 `claude`，自动读取 |
 | **DeepSeek Harness** | `Tool/prompts/AGENTS.md` | `DSH-PROFILE.md` (Cordis YAML) | 指令部署至工作目录 + MCP 插件写入 DSH Profile |
 | **OpenCode / Codex** | 项目根 `AGENTS.md` | 客户端全局配置 | 复制 `AGENTS.md` 至项目工作根目录 |
+| **Qoder** | 项目根 `qoder.md` | 项目根 `.mcp.json` + `.qoder/settings.json` | 在工作台根目录打开 Qoder，`qoder.md` 自动加载、MCP 自动启用 |
 
 ### 4. 部署完备性校验（7 大维度 · 35 项检查）
 
@@ -330,7 +334,7 @@ powershell -ExecutionPolicy Bypass -File .\install.ps1
 
 ### 3. 二进制 / Native 逆向（PE / ELF / Mach-O）
 - Radare2 无头模式：架构识别、熵扫描、符号提取、类 C 伪代码
-- IDA Pro MCP 全链路：Hex-Rays 反编译、交叉引用、结构体恢复
+- 官方 ida-mcp（6 工具）：`open_database` + `execute_python` 驱动 Hex-Rays 反编译、交叉引用、结构体恢复
 - 反调试对抗：故意崩溃 Stub、`svc` 直接系统调用、内核级驱动检测（参见 `MANUAL/ANTI-DEBUG.md`）
 
 ### 4. CTF 竞赛与 Web 目标分析

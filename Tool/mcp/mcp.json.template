@@ -11,22 +11,23 @@
       "transport": "stdio"
     },
     "ida": {
-      "command": "<IDA_PYTHON>",
+      "command": "<UVX>",
       "args": [
-        "<IDA_ROOT>\\Lib\\site-packages\\ida_pro_mcp\\server.py"
+        "ida-mcp",
+        "stdio",
+        "--agent=pi"
       ],
       "env": {
         "PYTHONIOENCODING": "utf-8"
       },
       "transport": "stdio",
       "lifecycle": "eager",
-      "requestTimeoutMs": 180000
+      "requestTimeoutMs": 420000
     },
     "playwright": {
-      "command": "npx",
+      "command": "<NODE_EXE>",
       "args": [
-        "-y",
-        "@playwright/mcp@latest",
+        "<SEEP_ROOT>\\Tool\\mcp\\Tool\\safe\\playwright-mcp\\cli.js",
         "--extension"
       ],
       "env": {
@@ -36,10 +37,9 @@
       "lifecycle": "eager"
     },
     "js-reverse": {
-      "command": "npx",
+      "command": "<NODE_EXE>",
       "args": [
-        "-y",
-        "js-reverse-mcp"
+        "<SEEP_ROOT>\\Tool\\mcp\\Tool\\safe\\js-reverse-mcp\\build\\src\\index.js"
       ],
       "transport": "stdio",
       "lifecycle": "lazy"

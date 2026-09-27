@@ -15,7 +15,9 @@
 | **APK 反编译流水线** | `Tool/scripts/apk/decode.ps1` | 一键运行 `jadx` + `apktool` 解包反编译并生成组件摘要 |
 | **APK 重打包与签名** | `Tool/scripts/apk/rebuild-sign-install.ps1` | 修改 Smali 后全自动执行 `apktool b` -> 4字节对齐 -> 签名 -> ADB 推送安装 |
 | **Frida 动态注入** | `Tool/scripts/apk/frida-run.ps1` | 标准化设备枚举、进程列表与 Spawn/Attach 动态 Hook 运行 |
-| **IDA Pro MCP 唤醒** | `Tool/scripts/trigger_ida_mcp.ps1` | 静默启动 IDA Pro 64 并自动挂载 MCP 分析链路 |
+| **IDA 就绪自检/无头打开** | `Tool/scripts/ida_ensure_ready.ps1` | 校验 uvx/插件/nexus 后端，必要时以 `-A` 拉起 IDA 并清理模态弹窗 |
+| **ida-mcp 握手自检** | `Tool/scripts/ida_mcp_handshake.py` | 环境预检 + 真实 JSON-RPC 握手，打印工具数与函数/字符串计数 |
+| ~~IDA MCP 唤醒~~ | `Tool/scripts/trigger_ida_mcp.ps1` | ⚠️ 已废弃空壳（旧版轮询 127.0.0.1:13337），仅提示改用 `ida_ensure_ready.ps1` |
 
 ---
 
@@ -28,7 +30,7 @@
    ```
    *产物将完整隔离在 `work/hills-localize/` 下，不污染任何工作区根目录。*
 2. **IDA 自动化辅助分析**：
-   - 使用 `mcp_ida_*` 系列工具或唤醒 IDA Pro；
+   - 用官方 ida-mcp：`open_database` 开库 → `reference` 查签名 → `execute_python` 写 ida-domain 分析代码；
    - 检索 `License`、`VIP`、`Expire` 等关键函数，提取判断逻辑分支。
 3. **编写免杀代理 DLL 热补丁**：
    - 遵循 `softseep` 战术，优先选取宿主必定隐式引用的系统库（如 `version.dll`、`dinput8.dll`）；

@@ -180,34 +180,52 @@ seep_kb_search(query="信号描述")  或  reverselab/kb 全文检索
 
 ## MCP 工具链与 IDA Pro 联动规约
 
-### 已注册的 MCP（3 个）
+### 已注册的 MCP（4 个）
 
 | MCP | 工具数 | 用途 | 依赖 |
 | :--- | :---: | :--- | :--- |
-| **seep** | **22** | 二进制逆向（Radare2）+ APK 逆向（JADX/Apktool）+ Frida Hook 生成 + 知识库检索 | radare2 / jadx / apktool |
-| **ida** | **~243** | IDA 全套分析链（反编译 / 交叉引用 / 结构体恢复） | **需自备 IDA Pro** |
-| **playwright** | — | 浏览器自动化（Web 审计 / JS 逆向） | npx |
+| **seep** | **23** | 二进制逆向（Radare2）+ APK 逆向（JADX/Apktool）+ Frida Hook 生成 + 知识库检索 | radare2 / jadx / apktool |
+| **ida** | **6** | Hex-Rays 官方 `ida-mcp`：打开数据库 + IDAPython 执行 + API 文档检索 | **需自备 IDA Pro ≥ 9.4** |
+| **playwright** | — | 浏览器自动化（Web 审计 / JS 逆向） | node |
+| **js-reverse** | — | JS 逆向 / 断点调试 | node |
 
 **配置位置**：`~/.pi/agent/mcp.json`（由 `setup/install-pi.ps1` 生成）
 **完整说明**：见分享包 `Tool/docs/MCP-SETUP.md`
+**战术手册**：`Tool/skill/ida-reverse/SKILL.md`（v3，含实测签名与坑表）
 
 ### 启动自检（不确定 MCP 是否就绪时先跑）
 
 | 工具 | 检测什么 |
 | :--- | :--- |
 | `seep_status` | radare2 / jadx / apktool / 知识库 就绪状态 |
-| `seep_ida_status` | IDA MCP 是否可用 |
+| `seep_ida_status` | IDA 安装 / idalib / uvx / GUI 插件 / nexus 后端在线状态 |
 
 ### IDA Pro 联动（仅在装了 IDA 时适用）
+
+> 官方 `ida-mcp` 只有 **6 个工具**，全部分析都靠 `execute_python` 里写 IDAPython。
+> 没有 `mcp_ida_decompile` 这类细粒度工具，也没有 HTTP 端口可轮询 ——
+> 旧版（mrexodia `ida-pro-mcp` / 13337 / Ctrl+Alt+M）的启动仪式**全部作废**。
 
 当用户提及"用 IDA 分析 X"或给出 ELF/PE/SO/DLL 时：
 
 1. **定位目标文件**（.exe / .dll / .so / .elf）
-2. **读取 IDA 路径** —— 从 `~/.pi/agent/mcp.json` 的 `mcpServers.ida.command` 解析出
-   IDA Python 路径，反推 IDA 安装目录。**严禁硬编码路径**（每台机器安装位置不同）
-3. **唤醒 IDA** 并以命令行参数挂载目标文件
-4. **轮询就绪** —— 检测 IDA MCP 服务端口（默认 `127.0.0.1:13337`，以 mcp.json 配置为准）
-5. **走 ida MCP 分析链** —— 函数枚举 → 反编译 → 交叉引用 → 关键路径提取
+2. **自检**（可选，不确定环境时）：`seep_ida_status` 或
+   `python Tool/scripts/ida_mcp_handshake.py`
+   —— 检查 IDA 安装、idalib、uvx 绝对路径、GUI 插件、nexus 后端
+3. **打开数据库**：`open_database { path: "<目标文件>" }`
+   - 默认走 **idalib 后端**（无头，不用开 GUI）。冷启动约 4.5s，首次执行代码约 55s
+   - 返回 `instance_id` / `backend` / `status` / `log_path`，把 `instance_id` 记住
+   - 若已在 GUI 里打开该文件，则自动 attach 到 **gui 后端**（0.1s，可看到 GUI 中的改名/注释/结构体）
+4. **取 API 文档再动手**：`reference { query: "..." }`
+   —— 签名凭记忆写必错（见 SKILL v3 的 6 个签名陷阱），先查再写
+5. **走分析链**：`execute_python` 内
+   `db.functions` 枚举 → `db.pseudocode.decompile(ea)` 反编译 →
+   `db.xrefs.to_ea / from_ea / get_callers` 交叉引用 → `db.strings` / `db.names` 定位锚点
+6. **落盘与收尾**：改了名字/注释/结构体才需要 `save_database`（`db` 对象**没有** `save()` 方法），
+   结束用 `close_database`
+
+**报错即证据**：`execute_python` 抛异常会以 `isError:true` + 完整 traceback 返回，
+不需要额外日志通道。
 
 ### 未装 IDA 时的降级路线（不阻塞任务）
 
@@ -217,7 +235,8 @@ seep_kb_search(query="信号描述")  或  reverselab/kb 全文检索
 | 需求 | seep MCP 替代 |
 | :--- | :--- |
 | 架构 / 壳 / 熵 / 字符串侦察 | `seep_r2_info` · `seep_r2_strings` |
-| 反汇编（含交叉引用） | `seep_r2_disasm` · `seep_r2_functions` |
+| 反汇编（含交叉引用） | `seep_r2_disasm` · `seep_r2_xrefs` · `seep_r2_functions` |
+| 任意 r2 命令 | `seep_r2_cmd` |
 | 类 C 伪代码 | `seep_r2_decompile` |
 | 二进制差分 | `seep_r2_diff` |
 | 汇编 ↔ 机器码 | `seep_r2_asm` |
@@ -229,6 +248,10 @@ seep_kb_search(query="信号描述")  或  reverselab/kb 全文检索
 
 ```
 有 seep_* 可用      → 用 seep_*（轻量、无需 GUI）
-需深度反编译/结构体  → 用 mcp_ida_*（需 IDA）
-需浏览器交互         → 用 playwright
+需深度反编译/结构体  → 用官方 ida MCP 的 execute_python（需 IDA ≥ 9.4）
+需浏览器交互         → 用 playwright / js-reverse
 ```
+
+> **严禁硬编码路径**：IDA 安装位置、`uvx` 绝对路径每台机器都不同。
+> IDA 根目录从 `%APPDATA%\Hex-Rays\IDA Pro\ida-config.json` 的 `IDAPATH` 读取，
+> `uvx` 用 `Tool/scripts/ida_mcp_handshake.py` 的探测逻辑，不要写死。

@@ -30,7 +30,7 @@
 | 6 | **apk-reverse** | `Tool/skill/safe-skills/apk-reverse/` | 同上 | 8 | 52 KB |
 | 7 | **radare2** | `Tool/skill/safe-skills/radare2/` | 同上 | 3 | 20 KB |
 | 8 | **mcp-js-reverse-playbook** | `Tool/skill/safe-skills/mcp-js-reverse-playbook/` | 同上 | 13 | 24 KB |
-| 9 | **ida-reverse**（safe 版） | `Tool/skill/safe-skills/ida-reverse/` | 同上 | 3 | 28 KB |
+| 9 | ~~ida-reverse~~（safe 版，**已废弃不安装**） | `Tool/skill/safe-skills/ida-reverse/` | 与 #3 同名冲突，`install-pi.ps1` 现保留顶层版 | 3 | 28 KB |
 
 ### ⚠ apkseep 的上游归属（合规声明）
 
@@ -123,21 +123,29 @@ apkseep/
 **工具分组**：
 ```
 状态环境(2)   seep_status · seep_ida_status
-二进制 r2(8)  seep_r2_info · _cmd · _strings · _functions · _disasm · _decompile · _diff · _asm
+二进制 r2(9)  seep_r2_info · _cmd · _strings · _functions · _disasm · _decompile · _diff · _asm · _xrefs
 Android(5)    seep_apk_info · _decompile · _unpack · _smali_search · _gen_hook
 知识库(4)     seep_kb_search · _read · _checklist · _payloads
 流程编排(3)   seep_task_init · seep_auto_triage · seep_gen_security_report
 ```
 
-### ② ida MCP（~243 工具）
+### ② ida MCP（官方 Hex-Rays `ida-mcp`，6 工具）
 
 | 组成 | 位置 | 说明 |
 | :--- | :--- | :--- |
-| **MCP 服务** | `tools/ida-pro-mcp/`（脚本下载） | `server.py` + 插件 |
-| **⭐ 宿主依赖** | **你自备的 IDA Pro** | 商业授权，**不随包分发** |
-| **Python 运行时** | IDA 内置的 `python311` | 由 `install-pi.ps1` 探测 |
+| **MCP 服务** | PyPI `ida-mcp`（`uvx` 按需拉取，不落盘） | `uvx ida-mcp stdio --agent=<name>` |
+| **GUI 插件** | `Tool/mcp/Tool/safe/ida-mcp-plugin/`（随包） | 装到 `%APPDATA%\Hex-Rays\IDA Pro\plugins\` |
+| **插件依赖** | `ida-nexus>=0.13.0` | 装进 IDA 内置的 `python311` |
+| **⭐ 宿主依赖** | **你自备的 IDA Pro ≥ 9.4** | 商业授权，**不随包分发** |
+| **探测/安装** | `setup/install-ida.ps1` | 写 `mcp.json` 的 `ida` 条目 |
 
+> 工具只有 6 个：`open_database` · `execute_python` · `reference` · `list_databases` ·
+> `save_database` · `close_database`。全部分析靠 `execute_python` 里的 ida-domain API。
+>
 > 没有 IDA Pro 时，该 MCP 不可用；用 `seep_r2_*` + Ghidra 替代（见 `MANUAL/IDA-PRO.md`）。
+>
+> **历史**：本包曾用 mrexodia `ida-pro-mcp`（66 工具 / 端口 13337 / Ctrl+Alt+M 唤醒），
+> 现仅 `Tool/mcp/Tool/safe/ida-pro-mcp/` 存档，不再注册。
 
 ### ③ playwright MCP
 
@@ -199,7 +207,9 @@ Android(5)    seep_apk_info · _decompile · _unpack · _smali_search · _gen_ho
 | :--- | :--- | :--- |
 | `case-init.ps1` | `Tool/scripts/` | 任务建档门禁（一任务一目录） |
 | `refresh-tool-index.ps1` | `Tool/scripts/` | 工具链健康自检 |
-| `trigger_ida_mcp.ps1` | `Tool/scripts/` | 静默唤醒 IDA + 挂 MCP |
+| `trigger_ida_mcp.ps1` | `Tool/scripts/` | ⚠️ 已废弃空壳（旧 13337 唤醒器），改用 `ida_ensure_ready.ps1` |
+| `ida_ensure_ready.ps1` | `Tool/scripts/` | IDA 就绪自检 / 无头打开 / GUI 弹窗清理 |
+| `ida_mcp_handshake.py` | `Tool/scripts/` | 官方 ida-mcp 预检 + 真实 JSON-RPC 握手 |
 | `master-route.ps1` | `Tool/scripts/` | 主路由 |
 | `start_mcp.py` | `Tool/scripts/` | MCP 启动 |
 | `shot_ida.ps1` / `temp_ocr.ps1` | `Tool/scripts/` | 截图 / OCR 辅助 |
@@ -218,12 +228,13 @@ Android(5)    seep_apk_info · _decompile · _unpack · _smali_search · _gen_ho
 
 | 工具 | 服务的 MCP / Skill | 下载目标 | 体积 |
 | :--- | :--- | :--- | :--- |
-| **radare2** | `seep_r2_*`（8 工具） | `Tool/mcp/Tool/safe/radare2/` | ~39 MB |
+| **radare2** | `seep_r2_*`（9 工具） | `Tool/mcp/Tool/safe/radare2/` | ~39 MB |
 | **jadx** | `seep_apk_decompile` | `Tool/mcp/Tool/safe/jadx/` | ~460 MB |
 | **apktool** | `seep_apk_unpack` | `Tool/mcp/Tool/safe/apktool/` | ~24 MB |
 | **playwright-mcp** | playwright MCP | `Tool/mcp/Tool/safe/playwright-mcp/` | ~45 MB |
 | **js-reverse-mcp** | js-reverse-mcp MCP | `Tool/mcp/Tool/safe/js-reverse-mcp/` | ~234 MB |
-| **ida-pro-mcp** | ida MCP | `Tool/mcp/Tool/safe/ida-pro-mcp/` | ~79 MB |
+| **ida-nexus** | ida MCP（官方插件依赖） | IDA 的 `python311` site-packages | ~1 MB |
+| ~~ida-pro-mcp~~ | 旧版存档，已不使用 | `Tool/mcp/Tool/safe/ida-pro-mcp/` | ~79 MB |
 
 ---
 
@@ -231,10 +242,10 @@ Android(5)    seep_apk_info · _decompile · _unpack · _smali_search · _gen_ho
 
 ```
 seep_kb_* 四个工具   →  Tool/mcp/Tool/reverselab/kb/（289 篇）
-seep_r2_* 八个工具   →  Tool/mcp/Tool/safe/radare2/bin/
+seep_r2_* 九个工具   →  Tool/mcp/Tool/safe/radare2/bin/
 seep_apk_* 五个工具  →  Tool/mcp/Tool/safe/jadx/ + apktool/
 seep_apk_gen_hook   →  Tool/mcp/Tool/safe/hook-mcp/templates/
-ida MCP              →  自备 IDA Pro + Tool/mcp/Tool/safe/ida-pro-mcp/
+ida MCP（官方）       →  uvx + 自备 IDA Pro ≥9.4 + ida-nexus + ida-mcp-plugin 插件
 playwright MCP       →  npx + PLAYWRIGHT_MCP_EXTENSION_TOKEN
 softseep 路由         →  Tool/skill/softseep/（含 8 个 references）
 apkseep 全链路        →  Tool/skill/apkseep/（45 refs + 56 scripts）

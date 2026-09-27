@@ -1,0 +1,15 @@
+{
+  "mcp": {
+    "enabledProjectMcpServers": ["seep", "js-reverse"]
+  },
+  "permissions": {
+    "allow": [
+      "mcp__seep__seep_status",
+      "mcp__seep__seep_ida_status",
+      "mcp__seep__seep_task_init",
+      "mcp__seep__seep_auto_triage",
+      "mcp__seep__seep_r2_cmd",
+      "mcp__seep__seep_gen_security_report"
+    ]
+  }
+}

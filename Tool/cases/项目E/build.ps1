@@ -1,4 +1,4 @@
-# Build 项目E Activate (C#5 / .NET Framework 4.8, csc)
+﻿# Build 项目E Activate (C#5 / .NET Framework 4.8, csc)
 # Usage: powershell -ExecutionPolicy Bypass -File build.ps1
 $ErrorActionPreference = 'Stop'
 

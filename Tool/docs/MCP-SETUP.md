@@ -20,20 +20,21 @@ MCP（工具层）           →  给 agent「实际干活的手」
 
 ---
 
-## 二、3 个已注册 MCP
+## 二、4 个已注册 MCP
 
 | MCP | 工具数 | 用途 | 依赖 | 安装方式 |
 | :--- | :---: | :--- | :--- | :--- |
-| **seep** ⭐ | **22** | 二进制逆向 + APK 逆向 + Frida 生成 + 知识库 | radare2 / jadx / apktool | 本包自带 + 脚本下载工具 |
-| **ida** | **~243** | IDA 全套分析链 | **你自备的 IDA Pro** | 脚本装 MCP + 你装 IDA |
-| **playwright** | — | 浏览器自动化 | npx | 自动（npx 按需拉取） |
+| **seep** ⭐ | **23** | 二进制逆向 + APK 逆向 + Frida 生成 + 知识库 | radare2 / jadx / apktool | 本包自带 + 脚本下载工具 |
+| **ida** | **6** | 官方 Hex-Rays `ida-mcp`：开库 + IDAPython 执行 + API 检索 | **你自备的 IDA Pro ≥ 9.4** | `install-ida.ps1`（uvx + 插件） |
+| **playwright** | — | 浏览器自动化 | node | 本包自带 `playwright-mcp/`（需 token） |
+| **js-reverse** | — | Web / JS 逆向调试 | node | 本包自带 `js-reverse-mcp/` |
 
-### seep MCP 的 22 个工具
+### seep MCP 的 23 个工具
 
 | 分组 | 工具 |
 | :--- | :--- |
 | 状态环境 (2) | `seep_status` · `seep_ida_status` |
-| 二进制 r2 (8) | `seep_r2_info` · `_cmd` · `_strings` · `_functions` · `_disasm` · `_decompile` · `_diff` · `_asm` |
+| 二进制 r2 (9) | `seep_r2_info` · `_cmd` · `_strings` · `_functions` · `_disasm` · `_decompile` · `_diff` · `_asm` · `_xrefs` |
 | Android (5) | `seep_apk_info` · `_decompile` · `_unpack` · `_smali_search` · `_gen_hook` |
 | 知识库 (4) | `seep_kb_search` · `_read` · `_checklist` · `_payloads` |
 | 流程编排 (3) | `seep_task_init` · `seep_auto_triage` · `seep_gen_security_report` |
@@ -49,8 +50,8 @@ MCP（工具层）           →  给 agent「实际干活的手」
 4. 复制扩展    →  ~/.pi/agent/extensions/
 5. 生成 mcp.json：
      · <SEEP_ROOT>  → 本包实际路径
-     · <IDA_ROOT>   → 自动探测（D:\Tool\IDA Pro / C:\Program Files\IDA Pro / C:\IDA Pro）
-     · <IDA_PYTHON> → 探测到的 IDA Python
+     · <UVX>        → 自动探测到的 uvx.exe 绝对路径（找不到则写 "uvx" 并告警）
+     · IDA 本体 / ida-nexus / 官方插件 → 由 setup\install-ida.ps1 负责，不在本脚本
      · playwright token → 需你自填（不用浏览器自动化可留空）
 6. 写 settings.json（12 个 pi packages）
 7. 执行 pi update --extensions
@@ -68,21 +69,35 @@ MCP（工具层）           →  给 agent「实际干活的手」
       "transport": "stdio"
     },
     "ida": {
-      "command": "<IDA Python 路径>",
-      "args": ["<IDA 安装目录>\\Lib\\site-packages\\ida_pro_mcp\\server.py"],
+      "command": "<uvx.exe 绝对路径>",
+      "args": ["ida-mcp", "stdio", "--agent=pi"],
+      "env": { "PYTHONIOENCODING": "utf-8" },
       "transport": "stdio",
       "lifecycle": "eager",
-      "requestTimeoutMs": 180000
+      "requestTimeoutMs": 420000
     },
     "playwright": {
-      "command": "npx",
-      "args": ["-y", "@playwright/mcp@latest", "--extension"],
+      "command": "<node.exe 绝对路径>",
+      "args": ["<本包路径>\\Tool\\mcp\\Tool\\safe\\playwright-mcp\\cli.js", "--extension"],
       "env": { "PLAYWRIGHT_MCP_EXTENSION_TOKEN": "<你的token>" },
-      "transport": "stdio"
+      "transport": "stdio",
+      "lifecycle": "eager"
+    },
+    "js-reverse": {
+      "command": "<node.exe 绝对路径>",
+      "args": ["<本包路径>\\Tool\\mcp\\Tool\\safe\\js-reverse-mcp\\build\\src\\index.js"],
+      "transport": "stdio",
+      "lifecycle": "lazy"
     }
   }
 }
 ```
+
+> **为什么不用 `npx -y`**：`npx` 在 Windows 上是 `npx.cmd`，MCP 客户端用 CreateProcess
+> 直接拉起会报 `WinError 2 系统找不到指定的文件`；即便起得来，`npx -y` 每次启动都要
+> 联网去 registry 取包。工作台自带这两个包的 `node_modules`，跑一次
+> `setup\extract-deps.ps1` 即可解压依赖并编译出 `js-reverse-mcp\build\src\index.js`，
+> 所以统一用绝对路径的 `node.exe` 直跑本地入口。
 
 ---
 
@@ -127,7 +142,18 @@ powershell -ExecutionPolicy Bypass -File .\verify.ps1
 pi：[返回 radare2 / jadx / apktool / 知识库 的就绪状态]
 ```
 
-### 方法 3：手工检查
+### 方法 3：验证 ida MCP（官方 ida-mcp 真握手）
+
+```powershell
+# 环境预检 + 真实 JSON-RPC 握手：会打印 SERVER / TOOLS(6) / OPEN / READY / 函数与字符串计数
+python Tool\scripts\ida_mcp_handshake.py
+powershell -File Tool\scripts\ida_ensure_ready.ps1 -Status
+```
+
+> 不要用「目录是否存在」「端口是否监听」判断 IDA 桥是否就绪 ——
+> 官方 server 的后端端口由 ida-nexus 随机分配，只有真握手能证明它是活的。
+
+### 方法 4：手工检查
 
 ```powershell
 # 1. 配置无占位符残留
@@ -147,11 +173,11 @@ python -c "import ast; ast.parse(open(r'C:\...\Seep\Tool\mcp\seep_mcp_server.py'
 | MCP 工具 | 依赖的目录 / 工具 | 缺失时的现象 |
 | :--- | :--- | :--- |
 | `seep_kb_*`（4 个） | `Tool/mcp/Tool/reverselab/kb/` | 检索返回空 / 报路径不存在 |
-| `seep_r2_*`（8 个） | `Tool/mcp/Tool/safe/radare2/bin/` | "radare2 not found" |
+| `seep_r2_*`（9 个） | `Tool/mcp/Tool/safe/radare2/bin/` | "radare2 not found" |
 | `seep_apk_decompile` | `Tool/mcp/Tool/safe/jadx/bin/` | "jadx not found" |
 | `seep_apk_unpack` | `Tool/mcp/Tool/safe/apktool/` | "apktool not found" |
 | `seep_apk_gen_hook` | `Tool/mcp/Tool/safe/hook-mcp/templates/` | 模板缺失 |
-| `mcp_ida_*`（~243 个） | 自备 IDA Pro + `Tool/mcp/Tool/safe/ida-pro-mcp/` | "IDA not available" |
+| `ida` MCP（6 个） | uvx + 自备 IDA Pro ≥9.4 + `ida-nexus` + 官方插件 | `open_database` 报错 / 无 nexus 后端 |
 | playwright 工具 | npx + token | 浏览器不可用 |
 
 **排障口诀**：工具报错 → 看它读哪个目录 → 检查该目录是否存在且非空。
@@ -171,6 +197,10 @@ python -c "import ast; ast.parse(open(r'C:\...\Seep\Tool\mcp\seep_mcp_server.py'
 | 汇编 ↔ 机器码 | `seep_r2_asm` |
 
 报告中应标注：**"未使用 IDA 反编译器，伪代码质量受限"**。
+
+> 装了 IDA 时也只有 6 个工具，别去找 mcp_ida_decompile 之类的名字 ——
+> 反编译是在 execute_python 里写 db.pseudocode.decompile(ea)。
+> 详见 Tool/skill/ida-reverse/SKILL.md（v3）。
 
 详见 `MANUAL/IDA-PRO.md`（含 3 种方案对比）。
 
@@ -209,8 +239,8 @@ python -c "import ast; ast.parse(open(r'C:\...\Seep\Tool\mcp\seep_mcp_server.py'
 | pi 启动后 MCP 没加载 | **重启 pi**（MCP 在启动时注册） |
 | `seep` 工具全部不可用 | 检查 `mcp.json` 的 `seep.args[0]` 路径是否存在 |
 | `seep_kb_*` 报错 | 检查 `Tool/mcp/Tool/reverselab/kb/` 是否 ≥289 篇 |
-| `seep_r2_*` 报错 | 重跑 `setup\install-tools.ps1` |
-| `ida` 工具报错 | 确认 IDA 已装 + `mcp.json` 里 ida 路径正确 |
+| `seep_r2_*` 报错 | 重跑 `setup\repair-tools.ps1` |
+| `ida` 工具报错 | 跑 `python Tool\scripts\ida_mcp_handshake.py`，看断在哪一环（uvx / IDA / 插件 / nexus） |
 | MCP 配置文件被我改坏了 | 重跑 `setup\install-pi.ps1`（会自动备份旧配置） |
 | 想看 MCP 报错日志 | pi 启动时的 stderr；或手工 `python Tool\mcp\seep_mcp_server.py` 看输出 |
 

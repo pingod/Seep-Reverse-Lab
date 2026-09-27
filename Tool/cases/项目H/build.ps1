@@ -1,4 +1,4 @@
-# 项目H <目标版本> Keygen 构建脚本
+﻿# 项目H <目标版本> Keygen 构建脚本
 # 用法：powershell -ExecutionPolicy Bypass -File build.ps1   [ -Gui | -Cli ]
 param(
     [switch]$Gui,

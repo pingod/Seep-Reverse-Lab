@@ -152,9 +152,12 @@ byte[] decrypted = emu.readMemory(outputAddress, length);
 ```
 
 ### MCP Commands
-- Recon: `list_functions`, `list_imports`, `list_strings`
-- Analysis: `decompile_function`, `get_xrefs_to`
-- Annotation: `rename_function`, `rename_variable`
+（官方 Hex-Rays `ida-mcp` 只有 6 个工具，没有 `decompile` / `xrefs_to` 这类细粒度工具名；
+ 战术清单见 `Tool/skill/ida-reverse/SKILL.md` v3）
+- 入口: `open_database` → `execute_python` →（改过东西再）`save_database` → `close_database`
+- Recon: `execute_python` 里 `len(db.functions)` / `db.strings.find_text(...)` / `db.imports`
+- Analysis: `db.pseudocode.decompile(ea)` / `db.disasm.*` / `db.xrefs.to_ea` `from_ea` `get_callers`
+- Annotation: 先 `reference(query)` 查签名，再用 `db.names` / `db.comments` 写入
 
 ---
 

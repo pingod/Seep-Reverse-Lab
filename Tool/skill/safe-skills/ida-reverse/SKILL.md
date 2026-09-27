@@ -1,5 +1,5 @@
 ﻿---
-name: ida-reverse
+name: ida-reverse-legacy
 description: |
   IDA Pro 逆向分析辅助技能。当用户提到逆向、反编译、分析二进制/PE/ELF/APK/DLL/SO、破解、找密码、漏洞分析、病毒分析、firmware 固件分析，或需要分析 exe/dll/so/elf/macho/sys 等文件时，务必使用此技能。
 
@@ -9,6 +9,14 @@ description: |
 ---
 
 # IDA Pro 逆向分析技能
+
+> ⚠️ **已废弃（仅存档）**
+> 本文描述的是第三方 `idalib-mcp` / HTTP `idapro_*` 路线。
+> 本工作台的 IDA 桥已切换到 **Hex-Rays 官方 `ida-mcp`**，
+> 权威手册是 `Tool/skill/ida-reverse/SKILL.md`（v3，6 工具 + ida-domain API）。
+> 工具名、端口、启动方式均与本文不同 —— **不要按本文操作**。
+> `scripts/start.ps1` / `scripts/open.ps1` 同理已失效。
+
 
 ## 已知问题与反思（必读）
 

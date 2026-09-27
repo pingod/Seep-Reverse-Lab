@@ -339,8 +339,15 @@ that needs it — discovering this mid-task is the "missing tool" failure again.
 
 ### IDA Pro, headless
 
-IDA does **not** require a human at a GUI. `mrexodia/ida-pro-mcp` ships `idalib-mcp`, a headless MCP
-server that drives an IDA database with no GUI process at all:
+IDA does **not** require a human at a GUI. The official Hex-Rays `ida-mcp` (this toolkit's current
+bridge, 6 tools) spawns an `idalib` headless backend on demand — a single `open_database` call is
+the whole startup ritual. See `Tool/skill/ida-reverse/SKILL.md` v3 for the measured contract.
+
+<details>
+<summary>历史备注：mrexodia `ida-pro-mcp` / `idalib-mcp`（已停用，勿再配置）</summary>
+
+`mrexodia/ida-pro-mcp` shipped `idalib-mcp`, a headless MCP server that drives an IDA database
+with no GUI process at all:
 
 ```sh
 uv run idalib-mcp --host 127.0.0.1 --port 8745 path/to/executable   # open a binary up front
@@ -348,15 +355,18 @@ uv run idalib-mcp --host 127.0.0.1 --port 8745                      # open datab
 uv run idalib-mcp --stdio                                           # for stdio-based clients
 ```
 
-Prerequisites, all of which must be arranged before the first call: IDA Pro 8.3+ (9 recommended;
-**IDA Free is not supported**), a Python 3.11+ that `idapyswitch` can select, `uv`, and an `idalib`
+Prerequisites, all of which had to be arranged before the first call: IDA Pro 8.3+ (9.4 is required
+by the official plugin), a Python 3.11+ that `idapyswitch` can select, `uv`, and an `idalib`
 activated globally via `py-activate-idalib.py`. Each open database lives in a worker process that
 outlives the supervisor and is adopted transparently by a later supervisor on the same host, so
 several sessions can share one analysis. Every tool call carries an explicit `database` argument —
 there is no implicit "current database" — and `idb_open` returns the session id you must pass.
 
-The GUI-plugin variant of the same project is deprecated upstream in favour of `idalib-mcp`; do not
-set that up for agent work.
+The GUI-plugin variant (port 13337 / Ctrl+Alt+M) is deprecated upstream in favour of `idalib-mcp`;
+both are superseded here by the official `ida-mcp`.
+
+</details>
+
 
 ### Ghidra
 

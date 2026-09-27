@@ -1,0 +1,26 @@
+{
+  "IDAMetadataDescriptorVersion": 1,
+  "plugin": {
+    "name": "ida-mcp",
+    "entryPoint": "ida_mcp_plugin.py",
+    "categories": ["api-scripting-and-automation"],
+    "keywords": ["python", "automation", "mcp", "ai"],
+    "description": "Expose IDA GUI databases through IDA Nexus for the official IDA MCP server.",
+    "idaVersions": ">=9.4",
+    "version": "20260924.0.3",
+    "license": "MIT",
+    "authors": [
+      {
+        "name": "Hex-Rays SA",
+        "email": "support@hex-rays.com"
+      }
+    ],
+    "urls": {
+      "repository": "https://github.com/HexRaysSA/ida-mcp"
+    },
+    "requiresPython": ">=3.11",
+    "pythonDependencies": [
+      "ida-nexus>=0.13.0"
+    ]
+  }
+}
