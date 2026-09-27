@@ -8,17 +8,13 @@ compatibility: Windows 10 / Windows 11 x64, IDA Pro ≥ 9.4（含 Hex-Rays 与 i
 # ida-reverse — IDA Pro 自动化逆向战术技能
 
 > **修订 v3（2026-09-27）**：整条链路换为 **Hex-Rays 官方 `ida-mcp`**，v2 的一半内容作废。
-> 本文所有结论均为实测，证据在
-> `lab\tessoa\evidence\ida_mcp_v3_probe.log`（工具契约）、
-> `ida_mcp_v3_probe2.log`（ida-domain 全 API 面）、
-> `ida_mcp_v3_probe3.log`（用法与报错形状）、
-> `ida_mcp_v3_probe4.log`（GUI attach）。
+> 本文所有结论均为实测（probe 记录：工具契约 / ida-domain 全 API 面 / 用法与报错形状 / GUI attach）。
 >
 > **v2 → v3 作废清单**（不要再照 v2 做）：
 > 轮询 `127.0.0.1:13337` ❌ · `Ctrl+Alt+M` 唤醒 ❌ · `server_health` / `survey_binary` /
 > `find_regex` / `decompile` / `xrefs_to` 等 66 个工具名 ❌ · `strings_cache_ready` 就绪门槛 ❌ ·
 > 「不要用 `-A`」❌（实测 9.4 上 `-A` 常驻且免对话框）。
-> 保留有价值的部分：UIA 清障（§6）、tessoa 锚点（§7）、PowerShell/WSL 实测坑（§8）。
+> 保留有价值的部分：UIA 清障（§6）、字符串/交叉引用锚点套路（§7）、PowerShell/WSL 实测坑（§8）。
 
 ---
 
@@ -45,7 +41,7 @@ compatibility: Windows 10 / Windows 11 x64, IDA Pro ≥ 9.4（含 Hex-Rays 与 i
 open_database { "path": "C:\\abs\\path\\to\\sample.exe" }
 ```
 
-实测耗时（同一个 13 MB Rust/PE 目标 `tessoa.exe`）：
+实测耗时（同一个 13 MB Rust/PE 目标）：
 
 | 场景 | 首次 `open_database` | 首次 `execute_python` | 说明 |
 | :--- | :--- | :--- | :--- |
@@ -70,7 +66,7 @@ open_database { "path": "C:\\abs\\path\\to\\sample.exe" }
 **就绪判据（替代 v2 的 `server_health` 三门槛）**：`open_database` 返回 `isError:false` 且
 
 ```python
-len(db.functions) > 0 and len(db.strings) > 0     # 实测 tessoa: 24698 / 29220
+len(db.functions) > 0 and len(db.strings) > 0     # 实测 13MB Rust/PE: 24698 / 29220
 ```
 
 `log_path` 指向的 `sessions\<id>.jsonl` 是**本次会话全部 execute_python 的留痕**，复盘/取证直接读它。
@@ -138,11 +134,11 @@ server instructions 原文要点：*「IDA Pro 编译产物逆向…用它替代
 ## 四、典型战术链（VIP / 授权分支定位）
 
 > 目标：字符串 → 引用它的地址 → 所在函数 → 调用者 → 伪代码 → 落注释/改名 → 保存。
-> 代码全部为实测可跑形状（`tessoa.exe`）。
+> 代码全部为实测可跑形状（示例目标：一个 13 MB 的 Rust/PE 授权客户端；下文用 `sample.exe`、`0xSAMPLE_*` 代指实测地址）。
 
 ```python
 # 0) 加载
-open_database {"path": "C:\\...\\tessoa.exe"}
+open_database {"path": "C:\\...\\sample.exe"}
 
 # 1) 敏感字符串：整表正则扫（实测 29220 条只花 0.1 s，不存在 v2 的「缓存未就绪静默空」）
 execute_python:
@@ -154,17 +150,17 @@ execute_python:
   for h in hits[:40]: print(h)
 
 # 2) 收窄：Rust 目标按模块路径过滤，噪声立降
-#    tessoa 实测命中 'tessoa::license::net_keygen\tlicense: ' @ 0x140ad8d78
-  sel = [s for s in db.strings if b'tessoa::license' in s.contents]
+#    例：某 Rust 授权客户端命中 '<crate>::license::net_keygen\tlicense: ' @ 0xSAMPLE_STR
+  sel = [s for s in db.strings if b'<crate>::license' in s.contents]
 
 # 3) 字符串 → 引用者（注意 *_refs_to_ea 返回 int，to_ea 返回 XrefInfo）
-  ea = 0x140ad8d78
+  ea = 0xSAMPLE_STR
   refs = list(db.xrefs.data_refs_to_ea(ea))      # 实测 6 条
   for x in db.xrefs.to_ea(ea):
       print(hex(x.from_ea), x.is_code, x.type)
 
 # 4) 取所在函数 + 调用者（CallerInfo 带 name / function_ea，最实用）
-  f = db.functions.get_at(0x140464c61)
+  f = db.functions.get_at(0xSAMPLE_FN)
   print(f, db.names.get_at(f.start_ea))
   for c in db.xrefs.get_callers(f.start_ea):      # 实测 3 个调用点
       print(hex(c.ea), c.name, hex(c.function_ea), c.xref_type)
@@ -176,12 +172,12 @@ execute_python:
   # 只要文本行：lines = db.pseudocode.get_text(f.start_ea)
 
 # 6) 一次多函数
-  for ea2, cf2 in zip([0x140464c61, 0x140001020], db.pseudocode.decompile_many([0x140464c61, 0x140001020])):
+  for ea2, cf2 in zip([0xSAMPLE_FN, 0xSAMPLE_OTHER], db.pseudocode.decompile_many([0xSAMPLE_FN, 0xSAMPLE_OTHER])):
       print(hex(ea2), type(cf2).__name__, len(str(cf2)))
 
 # 7) 标注并落盘（实测均返回 True）
-  db.names.set_name(0x140464c61, 'license_net_keygen_check')
-  db.comments.set_at(0x140464c61, '授权/网络校验主体')
+  db.names.set_name(0xSAMPLE_FN, 'license_net_keygen_check')
+  db.comments.set_at(0xSAMPLE_FN, '授权/网络校验主体')
   save_database {}
 ```
 
@@ -325,5 +321,4 @@ powershell -NoProfile -ExecutionPolicy Bypass -File Tool\scripts\ida_ensure_read
 
 - `Tool\scripts\ida_ensure_ready.ps1` — 官方模型的环境自检 + 真实握手（§7）
 - `Tool\scripts\trigger_ida_mcp.ps1` — **已废弃**（mrexodia Ctrl+Alt+M 专用，保留仅作历史说明）
-- `lab\tessoa\scripts\probe_official_contract.py` / `probe_ida_domain_api.py` / `probe_usage_recipes.py` / `probe_gui_attach.py` — 本文证据的复现脚本
-- `lab\tessoa\evidence\ida_mcp_v3_probe*.log` — 实测日志
+- 复现脚本（`probe_official_contract.py` / `probe_ida_domain_api.py` / `probe_usage_recipes.py` / `probe_gui_attach.py`）与其 `ida_mcp_v3_probe*.log` 输出：本文 v3 修订时的一次性验证件，**未随仓库分发**；如需重跑，按 §1/§3/§6 的形状重写即可。

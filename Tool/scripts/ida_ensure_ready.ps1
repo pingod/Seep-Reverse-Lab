@@ -5,8 +5,7 @@
 .DESCRIPTION
     v2 时代本脚本做三件事：启动 IDA GUI → UIA 清模态框 → 发 Ctrl+Alt+M 唤醒 mrexodia
     插件 → 轮询 127.0.0.1:13337。**换成官方 ida-mcp 后，前三步里只有「GUI 可选」还成立，
-    端口轮询与插件唤醒整体作废**，原因（2026-09-27 实测，证据见 lab\tessoa\evidence\
-    ida_mcp_v3_probe*.log）：
+    端口轮询与插件唤醒整体作废**，原因（2026-09-27 实测）：
 
       1) 官方 server 不需要 IDA 常驻。`open_database` 会自己起**无头 idalib worker**，
          冷启动（无 .i64）4.5s，热启动 1.4~1.9s，全程无 GUI、无弹窗。
@@ -16,7 +15,7 @@
       3) `ida.exe -A`（autonomous）在 9.4 上**是常驻的**，且免掉「Load a new file」/
          「Load PDB file」弹窗 —— v2「严禁 -A」的结论只对 9.3 + mrexodia 插件成立。
       4) 就绪判据不是某个 health 字段，而是 open_database 成功 + len(db.functions)/
-         len(db.strings) > 0（实测 tessoa：24698 / 29220）。
+         len(db.strings) > 0（实测 13 MB Rust/PE 目标：24698 / 29220）。
 
     因此本脚本现在只做官方模型下仍有意义的三件事：
       环境体检（ida.exe / uvx / GUI 插件 / ida-nexus / 两个 agent 的 mcp 注册）
