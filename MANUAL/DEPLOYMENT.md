@@ -1,0 +1,227 @@
+# MANUAL — 工作台全景部署与多 Agent 集成指南 (Deployment Guide)
+
+> 本手册是 **Seep Reverse Lab** 的咨询级部署标准规范。
+> 无论您使用的是 **Pi Agent**、**Claude Code**、**DeepSeek Harness (DSH)** 还是 **Codex / OpenCode**，亦或是运行在 **Windows**、**Linux** 或 **macOS** 环境，均可按照本手册实现 **100% 零错漏完整部署**。
+
+---
+
+## 一、 核心环境准入标准 (Prerequisites Matrix)
+
+在安装与初始化工作台前，请确保宿主机满足以下基础依赖：
+
+| 依赖项 | 最低版本要求 | 检查命令 | 验证标准 | 说明 |
+|---|---|---|---|---|
+| **操作系统** | Windows 10/11 x64<br>Ubuntu 20.04+ / macOS 12+ | `[Environment]::OSVersion` 或 `uname -a` | 64 位操作系统 | 推荐 Windows 10/11 作为逆向主环境 |
+| **Python** | Python 3.11 或 3.12 | `python --version` | `>= 3.11.0` | 必须勾选 `Add to PATH`，支持 `venv` 与 `pip` |
+| **Node.js** | Node.js 18.x 或 20.x LTS | `node --version` | `>= 18.0.0` | 支持 `npx`，供 JS 逆向与无头浏览器运行 |
+| **Git** | Git 2.30+ | `git --version` | 可执行 | 用于代码拉取与版本控制 |
+| **Java JDK** | OpenJDK 17 LTS (可选) | `java -version` | 17 LTS | **非强制**。未装 Java 时 Apktool/JADX 提示缺失，但 R2/PE 逆向 100% 可用 |
+| **IDA Pro** | 7.7 ~ 9.0 (可选) | — | 拥有合规商业授权 | **非强制**。未装时工作台自动降级为内置 Radare2 套件 |
+
+---
+
+## 二、 自动化一键安装部署 (One-Click Setup)
+
+工作台已将核心逆向套件（Radare2、JADX、Apktool、Playwright 自动化组件、JS 逆向引擎）物理内置在 `Tool/mcp/Tool/safe/` 中。安装脚本会自动解压离线依赖包并注册环境。
+
+### 1. Windows 用户（推荐）
+以普通用户或管理员身份打开 PowerShell，进入项目根目录：
+```powershell
+cd setup
+powershell -ExecutionPolicy Bypass -File .\install.ps1
+```
+
+> **自动化流水线动作**：
+> 1. **离线解压**：自动检测并解压 `js-reverse-mcp` 与 `playwright-mcp` 的预置 `node_modules.zip`；
+> 2. **协议依赖**：通过 pip 安装 Python 标准 `mcp` 协议库（`mcp>=1.20,<1.29`）；
+> 3. **工具链校验**：检测内置 Radare2、JADX、Apktool 执行文件完整性；
+> 4. **配置自愈**：读取本地实际物理路径，自动将绝对路径写入配置文件；
+> 5. **自检门禁**：自动调用 `verify.ps1` 进行 37 项完备性体检。
+
+### 2. Linux / macOS 用户
+打开终端，进入项目根目录：
+```bash
+chmod +x setup/install.sh
+./setup/install.sh
+```
+
+---
+
+## 三、 四大主流 Agent 接入专属 SOP
+
+### 1. 🟣 Pi Agent 专属接入流程
+
+Pi Agent 是原生支持 Skill 渐进式披露、拦截扩展与 `lab：` 状态机的主力智能体。
+
+1. **执行自动化安装脚本**（如已执行过第一步可跳过）：
+   ```powershell
+   powershell -ExecutionPolicy Bypass -File .\setup\install.ps1
+   ```
+2. **确认写入目录**：
+   - 技能包写入至：`~/.pi/agent/skills/`（包含 `softseep`、`apkseep` 等 9 个技能）；
+   - 系统提示词写入至：`~/.pi/agent/SYSTEM.md` 与 `AGENTS.md`；
+   - 安全放行扩展写入至：`~/.pi/agent/extensions/security-audit-interceptor.ts`；
+   - MCP 服务注册至：`~/.pi/agent/mcp.json`（其中已将 `<SEEP_ROOT>` 自动替换为当前工作台绝对路径）。
+3. **关键动作：重启 Pi Agent**：
+   - ⚠️ **切记**：安装完成后，**必须完全关闭当前的 pi 终端会话并重新拉起 `pi`**，使得新挂载的 Skill 和扩展被内存加载。
+4. **模型凭据配置 (API Key)**：
+   - 编辑 `~/.pi/agent/models.json`（或在启动时按提示配置），填入您授权的大模型 API Key（推荐 Claude 3.5 Sonnet / DeepSeek-V3 / GPT-4o）。
+5. **开工打卡**：
+   在 Pi 对话框中发送：
+   ```text
+   lab：
+   ```
+   看到状态标记写入成功后，即可直接下达逆向大白话任务！
+
+---
+
+### 2. 🟠 Claude Code 专属接入流程
+
+Claude Code 原生支持项目级上下文（`CLAUDE.md`）与项目级 MCP 注册（`.mcp.json`），是配置最简洁的智能体。
+
+1. **环境自愈生成**：
+   在项目根目录下运行一键配置生成脚本，确保 `.mcp.json` 中的命令指向当前实际路径：
+   ```powershell
+   powershell -ExecutionPolicy Bypass -File .\setup\generate-configs.ps1
+   ```
+2. **确认依赖就绪**：
+   确保运行 Claude Code 的当前终端能够执行 Python 并已安装 `mcp` 库：
+   ```bash
+   python -c "import mcp; print('MCP Ready')"
+   ```
+   若报错，执行：`pip install "mcp>=1.20,<1.29"`。
+3. **启动 Claude Code**：
+   在 Seep 项目根目录下直接运行：
+   ```bash
+   claude
+   ```
+4. **验证 MCP 挂载状态**：
+   在 Claude 对话界面中输入：
+   ```text
+   /mcp
+   ```
+   检查 `seep` 服务是否显示为绿色 `connected`，且暴露出 23 个工具。
+5. **执行一键校验**：
+   在 Claude 对话框直接发送：
+   ```text
+   check
+   ```
+   Claude 会自动执行 `check.ps1` 并以内联卡片向您汇报当前环境健康度。
+
+---
+
+### 3. 🔵 DeepSeek Harness (DSH) 专属接入流程
+
+DeepSeek Harness 采用基于 Cordis 插件协议的 YAML 配置。
+
+1. **生成可用 Cordis 配置**：
+   在项目根目录下执行：
+   ```powershell
+   powershell -ExecutionPolicy Bypass -File .\setup\generate-configs.ps1
+   ```
+   脚本将在控制台输出当前物理路径完全展开的 YAML 配置块，并在 `setup/cordis.generated.yml` 生成副本。
+2. **导入配置到 DSH Profile**：
+   打开您的 DSH profile 配置文件（或 `cordis.yml`），将 `cordis.generated.yml` 中的内容粘贴到 `plugins` 列表中：
+   ```yaml
+   plugins:
+     - id: seep-mcp
+       name: '@deepseek-ai/dsh-mcp-client'
+       config:
+         serverName: seep
+         transport: stdio
+         command: python
+         args:
+           - 'C:/实际路径/Tool/mcp/seep_mcp_server.py'
+         env:
+           PYTHONIOENCODING: utf-8
+   ```
+3. **加载核心指令**：
+   将 `Tool/prompts/AGENTS.md` 复制或引用至 DSH 工作目录根路径。
+4. **启动会话并开工**：
+   在 DSH 中启动会话，发送 `check` 确认环境连通。
+
+---
+
+### 4. 🟢 Codex / OpenCode 专属接入流程
+
+Codex 与 OpenCode 采用标准工作区配置。
+
+1. **生成工作区配置文件**：
+   运行 `powershell -ExecutionPolicy Bypass -File .\setup\generate-configs.ps1`，脚本将自动在根目录下生成合规的 `opencode.jsonc`。
+2. **配置说明**：
+   文件内部配置形如：
+   ```jsonc
+   {
+     "$schema": "https://opencode.ai/config.json",
+     "mcpServers": {
+       "seep": {
+         "command": "python",
+         "args": ["C:/实际路径/Tool/mcp/seep_mcp_server.py"],
+         "env": { "PYTHONIOENCODING": "utf-8" }
+       }
+     }
+   }
+   ```
+3. **指令载入**：
+   确保项目根目录下存在 `AGENTS.md`。启动 OpenCode 后，Agent 会自动解析该文件作为系统级作战协议。
+
+---
+
+## 四、 常见部署故障与排障速查表 (FAQ)
+
+### Q1: 运行 `check.ps1` 报错 `Running scripts is disabled on this system`？
+- **根因**：Windows PowerShell 默认的执行策略（ExecutionPolicy）为 `Restricted`。
+- **解决**：
+  - 临时允许当前脚本：在终端中显式加上 `-ExecutionPolicy Bypass`：
+    `powershell -ExecutionPolicy Bypass -File .\check.ps1`
+  - 或永久放开当前用户策略：在管理员 PowerShell 中执行：
+    `Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser`
+
+---
+
+### Q2: MCP 启动报错 `ModuleNotFoundError: No module named 'mcp'`？
+- **根因**：系统存在多个 Python（例如系统 Python、Conda、嵌入式 Python、或者全局安装了但 Agent 启动的是另一个），`mcp` 库安装在了别的环境中。
+- **解决**：
+  1. 查看当前终端调用的 python 绝对路径：
+     `Get-Command python | Select-Object Source`
+  2. 强制为该绝对路径下的 Python 安装依赖：
+     `python -m pip install "mcp>=1.20,<1.29"`
+  3. 若使用虚拟环境，请在 `mcp.json` 中把 `"command": "python"` 改为虚拟环境的绝对路径（如 `"C:/Users/.../venv/Scripts/python.exe"`）。
+
+---
+
+### Q3: 运行 `seep_r2_*` 或 `seep_apk_*` 报 `node_modules` 或文件找不到？
+- **根因**：GitHub 上传限制，部分工具依赖包以 `.zip` 形式预打包，用户未运行解压脚本。
+- **解决**：
+  运行离线解压修复脚本即可自动恢复：
+  ```powershell
+  powershell -ExecutionPolicy Bypass -File .\setup\extract-deps.ps1
+  ```
+
+---
+
+### Q4: 提示词输入 `lab：` 后模型毫无反应，依然按普通模式闲聊？
+- **根因**：
+  1. Pi Agent 的拦截扩展 `security-audit-interceptor.ts` 未被正确复制到 `~/.pi/agent/extensions/`；
+  2. 或者部署完成后未**重启 Pi Agent**。
+- **解决**：
+  1. 检查是否存在文件：`Test-Path "$env:USERPROFILE\.pi\agent\extensions\security-audit-interceptor.ts"`；
+  2. 杀掉当前终端进程，重新打开终端启动 `pi`。
+
+---
+
+### Q5: 体检时 IDA Pro 显示黄色 `[! OPTN]`，这算报错吗？
+- **解答**：**不算报错，完全不影响核心使用！**
+  - IDA Pro 是商业闭源软件，根据合规与版权要求，工作台**绝不随包捆绑**；
+  - 如果您本地未安装 IDA Pro，工作台内置的 **Radare2 全套二进制套件** 会全自动承接反汇编、反编译与函数枚举任务；
+  - 如果您拥有合法的商业授权，可阅读 `MANUAL/IDA-PRO.md`，执行 `setup/install-ida.ps1 -IdaRoot "<您的IDA路径>"` 即可完成挂载。
+
+---
+
+### Q6: Git Push 或同步时报 Connection Reset / Failed to connect to github.com？
+- **根因**：网络代理端口未对齐。
+- **解决**：
+  在终端临时指定本地代理端口（根据您的代理工具设置为 10808 / 7897 / 7890）：
+  ```bash
+  git -c http.proxy=http://127.0.0.1:10808 -c https.proxy=http://127.0.0.1:10808 push origin main
+  ```

@@ -1,50 +1,52 @@
 ===============================================================================
   INT0 REVERSE ENGINEERING RESEARCH SUITE
-  Release: 项目L.vL.TrustAnchorSwap-INT0
-  Target : 项目L vL  (Windows 桌面文件管理器 / Rust 原生 winit+wgpu / x64)
-           产品名与厂商域名已脱敏，见文末"脱敏说明"
+  Release: 项目L.v3.5.5.1.HookDll-INT0
+  Target : 项目L v3.5.5.1  (Windows 桌面截图贴图工具 / Qt5 C++ / x64)
 ===============================================================================
 
 [EN] English
 -------------------------------------------------------------------------------
-This archive is an educational client-side authorization audit of 项目L, a
-native x64 desktop application whose offline license proof is protected by a
-real Ed25519 signature.
+This release archive is an educational reverse engineering research suite
+analyzing the authorization model, cloud-computing dependency and remote
+control channel of 项目L v3.5.5.1.
 
-One-sentence finding:
-  The cryptography is implemented correctly. The TRUST ANCHOR and the TIME
-  BASE are not.
+Three capabilities were achieved - all inside a single proxy DLL, with the
+official binaries left byte-for-byte pristine on disk:
 
-Three properties combine into a full offline authorization bypass:
+  1. Membership privilege bypass   -> in-memory constant-folding of 11 local
+                                      boolean decision functions (14 features)
+  2. Translation backend hijack    -> {API_ENDPOINT} in-memory rewrite +
+                                      embedded local LLM gateway (any OpenAI /
+                                      Gemini / Anthropic compatible API)
+  3. Cloud-control removal         -> in-memory constant-folding of 3 remote
+                                      config / auto-update functions
 
-  1. The baked-in license public key is a 64-byte plaintext hex ASCII constant
-     in .rdata (file offset 0xB98733, VA 0x140B99733), referenced from four
-     sites but stored ONCE. It is replaced with an attacker key of exactly the
-     same length: no relocation, no section-table change, no PE structural
-     damage. 60 bytes of the 64 actually differ.
-     -> the attacker can now mint structurally valid, client-trusted proofs.
+KEY TECHNIQUE - PROXY DLL (PE Forwarder):
+  The host EXE imports 282 C++ symbols from 项目L_Auth.dll via its IAT.
+  We rename the official DLL to 项目L_AuthReal.dll, then drop in our own
+  项目L_Auth.dll whose export table contains 282 PE forwarders pointing at
+  the renamed original. The loader resolves everything transparently, and our
+  code now lives inside the host process - able to patch memory and hook
+  functions without touching a single official byte.
 
-  2. Verification is genuine, and the bypass proves it from the other side:
-     the [ed25519_verify] hook fires on every startup with arg2=0x40 and the
-     public-key argument equal to the string WE swapped in, and the verifier's
-     result feeds the authorization state. So this bypass does NOT patch the
-     verifier or invert a comparison - it substitutes the anchor and re-signs.
-     (Honest limit: the "bad signature => code=4" branch was located statically
-     in sub_1404A06F8 but never captured dynamically; see the doc's §2.1.)
+  +---------------------------------------------------------------+
+  |  项目L.exe --IAT--> 项目L_Auth.dll (our proxy, 260 KB)          |
+  |                        | 282 PE forwarders                    |
+  |                        v                                      |
+  |                    项目L_AuthReal.dll (official, 3.7 MB)        |
+  |                        + in-process memory patch engine       |
+  |                        + embedded 127.0.0.1 LLM gateway       |
+  +---------------------------------------------------------------+
 
-  3. The 14-day offline grace deadline is computed as
-         deadline = <signed `date` header of license.sig> + 1209600
-     inside fill_result (sub_1406F02C0, arithmetic at 0x1406F030B; the constant
-     0x127500 occurs exactly once in the whole binary). The client performs no
-     skew / freshness check on that date, and the date is covered only by the
-     signature the attacker now holds.
-     -> forward-date the header and the deadline moves 1:1. Measured: +3650
-        days => UI reports ~3663 days of offline grace remaining.
-        Negative control: -30 days => code=2 (grace passed).
-
-  Online re-validation is fail-open: an unreachable server or an untrusted
-  reply only logs a WARN and does not downgrade the local state, so the result
-  cannot be revoked through normal means.
+FOUR CRITICAL PITFALLS (all cause process crashes):
+  P1. rel32 jump overflow       -> 9 GB distance exceeds +-2 GB, must use
+                                   14-byte absolute jump
+  P2. lost ctor return value rax -> factory returns rax as the new object
+                                   pointer -> wild pointer -> delayed heap
+                                   corruption
+  P3. missing 3rd argument r8    -> base-class ctor receives garbage pointer
+  P4. trampoline stack semantics -> shadow space written into hook frame,
+                                   use unhook-call-rehook instead
 
 DISCLAIMER:
 This project is strictly for academic research, security auditing, and
@@ -53,166 +55,93 @@ If this software is valuable to your workflow, please support the original
 authors by purchasing a genuine commercial license.
 
 PACKAGE CONTENTS:
-  - README.txt                     (bilingual documentation)
-  - README.nfo                     (scene-style release info)
-  - build.ps1                      (self-check: syntax + placeholder guard +
-                                    synthetic-fixture self-test + redaction scan
-                                    + artifact isolation + SHA256SUMS +
-                                    package consistency)
-  - SHA256SUMS.txt                 (integrity manifest, generated by build.ps1)
-  - docs/reverse-engineering.md    (full walkthrough: chain diagram, verifier
-                                    evidence with its strength labelled
-                                    dynamic / static, grace-anchor hypothesis
-                                    evolution T1/T2/T3 with the same-license
-                                    control, decompiled decision function,
-                                    fingerprint derivation, updates/expiration
-                                    coupling, fail-open recheck, F-01..F-07,
-                                    remediation, address-level facts)
-  - src/keygen.py                  (trust-anchor swap + offline proof mint +
-                                    grace-date control; redacted placeholders)
-  - src/selftest.py                (runs the whole chain against a SYNTHETIC
-                                    fixture: 13 assertions, no target needed)
-  - src/verify_package.py          (checks the package against itself: manifest,
-                                    checksums, and every address / constant /
-                                    count the three docs layers quote)
-  - src/restore.ps1                (undo: restore original exe, remove minted
-                                    license artifacts)
+  - README.txt                       (bilingual documentation)
+  - README.nfo                       (scene-style release info)
+  - build.ps1                        (packaging + SHA256SUMS generator)
+  - docs/reverse-engineering.md      (full RE walkthrough: proxy-DLL design,
+                                      privilege decision chain, translation
+                                      endpoint rewrite, cloud-control removal,
+                                      four critical pitfalls, CWE-602 analysis,
+                                      defense-in-depth remediation)
+  - src/项目L_hook.c                   (hook engine: forwarder proxy, in-memory
+                                      patch engine, UI injection, cloud kill)
+  - src/项目L_bridge.c                 (embedded LLM gateway: minimal JSON,
+                                      Winsock server, WinHTTP client)
+  - src/项目L_bridge.h                 (gateway interface)
 
-VULNERABILITY SUMMARY
-  CWE-347  improper verification of cryptographic signature  (anchor, not alg)  Critical
-  CWE-602  client-side enforcement of server-side security                      High
-  CWE-693  protection mechanism failure (fail-open recheck, no skew check)       Medium
-  CWE-325  missing / key-less cryptographic binding (device_fp = FNV-1a-64)       Medium
-  CWE-345  unauthenticated plaintext cache (license.ini, 10 fields)               Medium
-  CWE-639  policy field short-circuits the expiry check (updates=lifetime)        Low
+BUILD:
+  Requires Zig (or any MinGW-w64 toolchain):
+    zig cc -target x86_64-windows-gnu -shared -O2 ^
+        -o 项目L_Auth.dll src\项目L_hook.c src\项目L_bridge.c ^
+        -lkernel32 -lws2_32 -lwinhttp
+  The .def forwarder table must be generated from the official DLL's export
+  directory (282 symbols).
 
-  Proof file    : 103-byte .rdata template + schema/host/path/date/digest/
-                  signature/body_b64 ; signing base = "host: H\n" "date: D\n"
-                  "digest: G" ; algorithm="ed25519"
-  Store file    : 55-byte header + 10 plaintext keys, never rewritten by the app
-  Device binding: lowercase hex FNV-1a-64(MachineGuid), 16 chars, NO "0x" prefix,
-                  compared byte-exact BEFORE verification (mismatch => code=6)
-  Time source   : GetSystemTimeAsFileTime -> epoch seconds, no monotonic clock,
-                  no anti-rollback storage
-  Status codes  : 0/3 valid (online), 1 valid (offline grace), 2 grace passed,
-                  4 proof missing / verify failed, 6 device mismatch
-
-NOTE ON REDACTION
-  Per the repository desensitization policy the following are NOT shipped:
-    - the target binary, the patched binary, and all raw evidence
-    - the baked-in public key literal        -> <REDACTED_BAKED_PUBKEY>
-    - the vendor API host / account path     -> <vendor-host> / <vendor-account>
-    - the sample MD5 (version guard)         -> <sample-md5>
-    - the product / exe / directory names    -> <product>
-    - the real MachineGuid and device fingerprint (never recorded; derived live)
-    - the self-signing private key (generated at run time, never committed)
-  Address-level facts (offsets, function addresses, the 1209600 constant) ARE
-  kept, because they are what makes the methodology reproducible.
-  src/keygen.py refuses to run with placeholders still in place; use
-      python src/keygen.py --check-config
-  to list what still has to be filled in. It fails loudly rather than silently
-  patching the wrong offset.
-
-BUILD / RUN
-  python src/selftest.py                   # 13 checks against a synthetic fixture
-  python -m pip install cryptography
-  python src/keygen.py --check-config      # list unfilled redacted values
-  python src/keygen.py --mint              # patched exe + license.sig + license.ini
-  python src/keygen.py --mint --sig-date-offset-days 3650
-  python src/keygen.py --mint --sig-date-offset-days -30    # reproduce code=2
-  python src/keygen.py --verify
-  python src/keygen.py --deploy            # to %APPDATA%\<product> (backups made)
-  python src/keygen.py --install-exe       # in-place patch (backup .orig-backup)
-  powershell -ExecutionPolicy Bypass -File src/restore.ps1 -Product <product>
-  powershell -ExecutionPolicy Bypass -File build.ps1 [-Denylist <local-list>]
-
-  build.ps1's redaction scan needs a list of the real literals that must not ship.
-  That list is itself identifying, so it is deliberately NOT part of the archive:
-  pass it with -Denylist (or set SEEP_DENYLIST_PROJECTL). Without it the scan still
-  runs the generic checks (no local user-profile paths, no binaries / evidence /
-  key material inside the case) and states plainly that the target list was absent.
-
-  The target is a SINGLE-INSTANCE application: kill the running process before
-  instrumenting it, otherwise the new instance forwards its arguments to the
-  existing one and exits (a Frida / API trace then comes back all-zero and is
-  easy to misread as "the function never ran").
+TECHNICAL HIGHLIGHTS:
+  - Feature enum        : 14 FeatureType entries extracted from Qt meta-object
+  - Patch sites         : 11 privilege decisions + 3 cloud-control functions
+  - Endpoint rewrite    : 4 memory patches (string slot + mov/lea immediates)
+  - UI injection        : QComboBox::insertItem via official-equivalent call
+  - LLM gateway         : auto-detects OpenAI / Gemini / Anthropic protocols
+  - Revert              : 100% official SHA256 verified, zero residue
 
 
-[中文] 中文说明
+[中文] 简体中文
 -------------------------------------------------------------------------------
-本归档是对 项目L（Windows x64 原生桌面应用）客户端授权链路的白盒安全审计。
-该目标的离线许可证明由真实的 Ed25519 签名保护。
+本发布包为学术研究性质的逆向工程研究套件，分析 项目L v3.5.5.1 的授权模型、
+云端算力依赖与远程控制通道。
 
-一句话结论：
-  密码学实现是正确的；错的是**信任锚**与**时间基准**。
+全部能力仅由**单个代理 DLL** 实现，磁盘上的官方二进制保持逐字节纯净：
 
-三条性质叠加，构成完整的离线授权旁路：
+  1. 会员特权旁路     -> 内存中恒值化 11 处本地布尔判定函数（14 项功能）
+  2. 翻译后端接管     -> 内存改写 {API_ENDPOINT} + 内嵌本地大模型网关
+                        （支持任意 OpenAI / Gemini / Anthropic 兼容 API）
+  3. 云控剥离         -> 内存中恒值化 3 处远程配置 / 自动更新函数
 
-  1. 内置许可公钥是 `.rdata` 里的 **64 字节明文十六进制 ASCII 常量**
-     （文件偏移 `0xB98733`，VA `0x140B99733`），四处引用但**只存一份**；
-     用**等长**的攻击者公钥就地替换：不改重定位、不改节表、不破坏 PE 结构
-     （64 字节中实际 60 字节不同）。
-     ⇒ 攻击者从此可以自签出结构合法、客户端判定可信的离线证明。
+关键技术 —— 代理 DLL（PE Forwarder）：
+  宿主 EXE 通过 IAT 从 项目L_Auth.dll 导入 282 个 C++ 符号。
+  我们把官方库改名为 项目L_AuthReal.dll，再用自建的 项目L_Auth.dll 顶替，
+  其导出表包含 282 条 PE 转发器指向改名后的官方库。加载器透明解析全部符号，
+  我们的代码由此进入宿主进程，从而能在**不改动任何官方字节**的前提下
+  改写宿主内存、Hook 宿主函数。
 
-  2. 验签是**真执行且返回值参与授权状态写入**的：启动时 `[ed25519_verify]`
-     hook 命中，`arg2=0x40`，公钥参数正是我们换进去的那串——这证明客户端
-     确实在用被替换的锚做真验签。
-     因此本例**没有**走"patch 验签调用 / 反转比较跳转"，
-     而是走"替换信任锚后重签"——这正是签名不可伪造时的正解。
-     （诚实边界："签名错误 ⇒ `code=4`" 这一拒绝分支只在 `sub_1404A06F8`
-     静态定位到写入点，**未**动态采到；详见报告 §2.1。）
+四大致命坑点（均会导致进程崩溃）：
+  坑 1  rel32 跳转溢出        -> 间距 9 GB 超出 ±2 GB，必须用 14 字节绝对跳转
+  坑 2  构造函数返回值 rax 丢失 -> 工厂函数直接把 rax 作为新对象指针返回，
+                                  产生野指针 -> 延迟堆损坏
+  坑 3  漏转发第 3 个参数 r8   -> 基类构造函数拿到垃圾指针
+  坑 4  trampoline 栈语义错误  -> 影子空间写入 Hook 栈帧，改用 unhook-call-rehook
 
-  3. 14 天离线宽限死线在 `fill_result`（`sub_1406F02C0`，算术在 `0x1406F030B`；
-     `0x127500` 在整个二进制中**只出现一次**）里计算为：
-         死线 = 已签名 `license.sig` 的 `date` 头 + 1209600
-     客户端对该日期**不做时效/偏差校验**，而该字段只被"攻击者现在持有的那把密钥"
-     的签名覆盖。
-     ⇒ 前推日期头，死线 1:1 外推。实测：`+3650` 天 ⇒ UI 显示离线宽限剩余约 3663 天；
-       反向对照 `-30` 天 ⇒ `code=2`（宽限已过）。
+免责声明：
+本项目严格用于学术研究、安全审计与教育目的，严禁商业利用。
+若该软件对您的工作有价值，请购买正版授权以支持原作者。
 
-  在线复核为 **fail-open**：服务端不可达或响应验签失败时只记一条 WARN，
-  **不降级**本地状态 ⇒ 一旦取得，正常吊销手段无法撤回。
+包内容：
+  - README.txt                       双语说明文档
+  - README.nfo                       场景风格发布信息
+  - build.ps1                        打包 + SHA256SUMS 生成器
+  - docs/reverse-engineering.md      完整逆向走查报告（代理 DLL 设计、特权判定
+                                     链路、翻译端点改写、云控剥离、四大坑点、
+                                     CWE-602 分析、纵深防御整改方案）
+  - src/项目L_hook.c                    Hook 引擎（转发代理 / 内存补丁 / UI 注入 / 云控屏蔽）
+  - src/项目L_bridge.c                  内嵌大模型网关（极简 JSON / Winsock 服务端 / WinHTTP 客户端）
+  - src/项目L_bridge.h                  网关接口
 
-免责声明：本归档仅用于学术研究与安全审计，且目标已在书面授权范围内。严禁商业使用。
-若该软件对你的工作有价值，请向原作者购买正式授权。
+构建：
+  需要 Zig（或任意 MinGW-w64 工具链）：
+    zig cc -target x86_64-windows-gnu -shared -O2 ^
+        -o 项目L_Auth.dll src\项目L_hook.c src\项目L_bridge.c ^
+        -lkernel32 -lws2_32 -lwinhttp
+  .def 转发表需从官方 DLL 的导出目录生成（282 个符号）。
 
-漏洞摘要：CWE-347（严重）/ 602（高）/ 693（中）/ 325（中）/ 345（中）/ 639（低）
-
-  证明文件 : 103 字节 .rdata 模板 + schema/host/path/date/digest/signature/body_b64；
-             签名基串 = "host: H\n" + "date: D\n" + "digest: G"；算法串 "ed25519"
-  缓存文件 : 55 字节头 + 10 个明文字段，应用**从不重写**
-  设备绑定 : FNV-1a-64(MachineGuid) 的小写十六进制，16 字符，**无 "0x" 前缀**；
-             在验签**之前**逐字节比较，不匹配 ⇒ `code=6`
-  时间来源 : FILETIME → epoch 秒；无单调时钟、无防回滚存储
-  状态码   : 1 离线宽限有效｜2 宽限已过｜6 设备不匹配 —— 三者动态实测；
-             0/3 在线有效｜4 证明缺失或验签失败 —— 仅静态定位，未采到（见 §2.1）
-
-脱敏说明：
-  按仓库脱敏规范，以下内容**不随包发布**：目标二进制、补丁产物、全部原始证据、
-  内置公钥字面值（→ `<REDACTED_BAKED_PUBKEY>`）、厂商域名与账户（→ `<vendor-host>` /
-  `<vendor-account>`）、样本 MD5（→ `<sample-md5>`）、产品与目录名（→ `<product>`）、
-  真实 MachineGuid 与设备指纹（不记录，运行时实时派生）、自签私钥（运行期生成，不入库）。
-  **地址级事实保留**（偏移、函数地址、`1209600` 常量），否则方法无法复现。
-  src/keygen.py 占位值未填写时会显式报错退出，可用
-      python src/keygen.py --check-config
-  查看待填项——宁可报错，也不会默默去打错误的偏移。
-  打包自检 build.ps1 的脱敏走查需要一份"真实字面值清单"；该清单本身就含目标身份，
-  因此**刻意不入库**：用 -Denylist 传入（或设环境变量 SEEP_DENYLIST_PROJECTL）。
-  清单缺失时仍执行通用走查（不得出现本机用户目录、包内不得有二进制/证据/私钥），
-  并明确报告目标专属清单未加载。
-
-关键方法论（详见 docs/reverse-engineering.md §9）：
-  M-1 单实例应用：插桩前必须先结束既有进程，否则 trace 全零会被误判成"函数没执行"。
-  M-2 指纹是逐字节严格相等：`0x` 前缀、大小写、长度都会失败，别把格式错当逻辑错。
-  M-3 时间锚点必须用**同许可证重放**判别，否则"换了 id 导致重新计时"会伪装成锚点命中。
-  M-4 证据管道禁止 `| head`：SIGPIPE 会让被采进程中途退出，产生假阴性。
-  M-5 报告中每个地址都要回到证据核对；未核对的地址必须删除，"看起来合理"的地址更有害。
-  M-6 双向对照：只有正向命中可能是巧合，前推 + 回拨同时 1:1 跟随才构成因果。
-
-本次审计中被实测推翻的四条早期假设（R-1~R-4）也写在文档里：
-  宽限期既**不**锚在 `last_validated`，也**不**锚在 `activated`——加固这两个字段
-  不会缩小任何攻击面。请勿据早期草稿整改。
+技术要点：
+  - 功能枚举    : 从 Qt 元对象数据提取 14 项 FeatureType
+  - 补丁点      : 11 处特权判定 + 3 处云控函数
+  - 端点改写    : 4 处内存补丁（字符串槽 + mov/lea 立即数）
+  - UI 注入     : 以官方等价调用注入 QComboBox::insertItem
+  - 大模型网关  : 自动识别 OpenAI / Gemini / Anthropic 三种协议
+  - 彻底还原    : 100% 官方 SHA256 校验通过，零残留
 
 ===============================================================================
-INT0 RESEARCH GROUP / Seep Reverse Lab
+  INT0 COLLECTIVE // 学术研究用途 // 支持正版 (https://项目L.cn/)
 ===============================================================================

@@ -87,7 +87,7 @@ PERSIST_PATCHES = {
 def blake2s_short(data: bytes, r: int) -> bytes:
     """客户端 sub_140245b50 的哈希：blake2s('项目H 2' + '1' + data) 取尾部 r 字节"""
     h = hashlib.blake2s(digest_size=16)
-    h.update(b"项目H 2")
+    h.update("项目H 2".encode("utf-8"))
     h.update(b"1")
     h.update(data)
     return h.digest()[-r:]

@@ -1,4 +1,4 @@
-param([string]$Exe="lab\v2840\<项目A>.exe",[int]$WaitSec=15,[string]$Tag="title")
+﻿param([string]$Exe="lab\v2840\<项目A>.exe",[int]$WaitSec=15,[string]$Tag="title")
 Add-Type -Namespace T -Name W -MemberDefinition @"
 [DllImport("user32.dll")] public static extern bool EnumWindows(EnumWindowsProc cb, IntPtr l);
 public delegate bool EnumWindowsProc(IntPtr h, IntPtr l);

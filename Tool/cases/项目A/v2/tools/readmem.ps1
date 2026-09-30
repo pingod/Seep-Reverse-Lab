@@ -1,4 +1,4 @@
-param([int]$TargetPid, [string[]]$Rvas)
+﻿param([int]$TargetPid, [string[]]$Rvas)
 Add-Type -Namespace W -Name M -MemberDefinition @"
 [DllImport("kernel32.dll")] public static extern IntPtr OpenProcess(int a, bool b, int p);
 [DllImport("kernel32.dll")] public static extern bool ReadProcessMemory(IntPtr h, IntPtr a, byte[] b, int s, out IntPtr r);

@@ -1,4 +1,4 @@
-$src = @'
+﻿$src = @'
 using System;
 using System.Runtime.InteropServices;
 using System.Drawing;

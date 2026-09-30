@@ -1,4 +1,4 @@
-# <项目A>  (Windows x64)
+﻿# <项目A>  (Windows x64)
 # : powershell -NoProfile -ExecutionPolicy Bypass -File probe_xy.ps1 -ExePath <path> [-Seconds 12] [-Screenshot <png>] [-Kill]
 param(
   [Parameter(Mandatory=$true)][string]$ExePath,

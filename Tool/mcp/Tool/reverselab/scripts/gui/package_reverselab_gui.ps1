@@ -1,4 +1,4 @@
-param(
+﻿param(
   [string]$OutputDir = "dist\ReverseLab-GUI-dev",
   [string]$PythonRoot = "",
   [string]$OpenCodeRoot = "",

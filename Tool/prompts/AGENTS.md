@@ -43,22 +43,18 @@ cd setup
 powershell -ExecutionPolicy Bypass -File .\install.ps1
 ```
 
-### 2. 主动校验与结构化汇报输出（★ 强制规则）
-- **部署完成后，Agent 必须主动执行一次校验**，严禁在未做验证前直接声称部署成功；
-- **当用户在任何时候要求校验**（例如发送 `check`、`doctor`、`检查环境`、`帮我校验一下安装是否完整`）时，Agent 必须直接执行根目录校验脚本：
+### 2. 主动校验与结构化汇报输出（★ 强制执行官方基准校对）
+- **部署完成后，Agent 必须主动执行一次详细校对**，严禁在未做验证前直接声称部署成功；
+- **当用户在任何时候要求校验**（例如发送 `check`、`doctor`、`检查环境`、`帮我校验一下安装是否完整`）时，Agent 必须直接执行校验脚本：
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\check.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File .\setup\verify.ps1 -Detailed
 ```
 - **输出规范**：
-  读取校验输出后，Agent 必须以清晰结构化的 Markdown 表格/卡片输出给用户，覆盖：
-  * **📁 目录架构**：Tool/ 核心仓完好
-  * **🛠️ 技能系统**：softseep、apkseep 等 9 个 Skill 是否已全部挂载就绪
-  * **🔌 MCP 服务**：seep (22工具)、ida、playwright、js-reverse 配置是否生效
-  * **🧠 提示词与 Lab 状态机**：SYSTEM.md、AGENTS.md、拦截扩展是否在位
-  * **🔧 内置工具箱**：Jadx (v1.5.6)、Radare2 (v6.2.2)、Apktool (v3.0.3) 是否可执行
-  * **📚 战术知识库**：289 篇实战笔记是否可检索
-  
-  全部通过时，告知用户：**“工作台处于 [READY / 完备就绪] 状态，输入 lab： 即可开启测试。”**
+  读取校验输出后，Agent 必须根据 `MANUAL/DEPLOYMENT-CHECKLIST.md` 官方基准清单，向用户输出四栏 Markdown 校对看板：
+  1. **🛠️ 技能系统 (Skills - 9项)**：逐项列出【技能名】|【目标路径】|【期望文件数】|【实际状态 (🟢 READY / 🔴 MISSING)】；
+  2. **🔌 MCP 服务引擎 (4大服务)**：逐项列出【服务名】|【期望工具数】|【实际连通性】|【状态 (🟢 READY / 🟡 DEGRADED)】（未装 IDA 时明确告知已自动降级为 Radare2 承接）；
+  3. **🔧 物理内置工具箱**：Jadx (v1.5.6)、Radare2 (v6.2.2)、Apktool (v3.0.3) 及 289+ 知识库状态；
+  4. **🚀 结论与开工指引**：全部核心项通过时告知：**“工作台处于 [READY / 完备就绪] 状态，重启终端后输入 lab： 即可开启测试。”**
 
 ---
 

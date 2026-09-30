@@ -1,0 +1,182 @@
+__________________________________________________________________________
+|                                                                          |
+|                     ██████╗  ██████╗ ██╗  ██╗████████╗                   |
+|                     ██╔══██╗██╔═══██╗██║  ██║╚══██╔══╝                   |
+|                     ██████╔╝██║   ██║███████║   ██║                      |
+|                     ██╔═══╝ ██║   ██║╚════██║   ██║                      |
+|                     ██║     ╚██████╔╝     ██║   ██║                      |
+|                     ╚═╝      ╚═════╝      ╚═╝   ╚═╝                      |
+|                                                                          |
+|                   [ INT0 RESEARCH GROUP // SCENE NFO ]                   |
+|__________________________________________________________________________|
+
+ - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+   RELEASE INFORMATION
+ - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+        Release .......: 项目N.vN.TrustAnchorSwap-INT0
+        Target ........: 项目N vN  (Windows 桌面文件管理器)
+        Runtime .......: Rust native GUI (winit event loop + wgpu renderer)
+                         PE32+ x64 / single-instance / NO WebView, NOT Tauri
+        Protection ....: Ed25519-signed offline license proof
+                         + device fingerprint binding
+                         + 14-day offline grace window
+                         + online re-validation
+        Category ......: Client-Side Authorization Audit / CWE-347
+        Language ......: Python / PowerShell
+        Date ..........: 2026-09
+
+ - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+   ABSTRACT
+ - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+        The cryptography here is correct. The anchor and the clock are not.
+
+        Verification is genuine: the [ed25519_verify] hook fires on every
+        startup with arg2=0x40 and the public-key argument equal to the string
+        we swapped in, and the verifier's result feeds the authorization state.
+        (Honest limit: the "bad signature => code=4" branch was located
+        statically in sub_1404A06F8 but never captured dynamically.)
+        So this bypass does NOT patch the verifier and does NOT invert a
+        comparison. It goes around the signature entirely:
+
+          [1] TRUST ANCHOR
+              The baked-in license public key is a 64-byte plaintext hex
+              ASCII constant in .rdata (file offset 0xB98733). One object,
+              four xrefs, exactly the same length as any Ed25519 key we
+              generate. Swap it in place:
+                 .reloc  -> untouched      section table -> untouched
+                 VA map  -> untouched      PE integrity  -> untouched
+              60 of the 64 bytes actually differ. That is the whole patch.
+
+          [2] RE-SIGN
+              Mint license.sig with our own key, in the target's own format:
+              103-byte .rdata header template +
+                 schema / host / path / date / digest / signature / body_b64
+              signing base (strict "headers" order):
+                 "host: H\n" "date: D\n" "digest: sha-256=<b64(sha256(body))>"
+              algorithm string is the literal "ed25519".
+
+          [3] TIME BASE
+              Offline grace deadline = signed `date` header + 1209600 (14d),
+              computed in fill_result (sub_1406F02C0; arithmetic at
+              0x1406F030B -- the constant 0x127500 appears EXACTLY ONCE in
+              the entire binary).
+              No skew check. The date is covered only by OUR signature.
+                 +3650 d -> UI reports ~3663 d of offline grace remaining
+                 -30 d   -> code=2 (grace passed)   [negative control]
+
+          [4] REVOCATION
+              Online re-validation is fail-open: unreachable server or
+              untrusted reply logs a WARN and leaves local state untouched.
+              Nothing the vendor can do through normal revocation pulls the
+              grant back.
+
+ - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+   THE GRACE-ANCHOR HUNT (three hypotheses, two of them wrong)
+ - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+        T1  deadline = ini last_validated + 14d   -> shift it, UI unchanged  ✗
+        T2  deadline = ini activated     + 14d    -> shift it, UI unchanged  ✗
+        T3  deadline = signed date hdr   + 14d    -> moves 1:1               ✓
+
+        T1/T2 look plausible -- last_validated is literally "the last time we
+        checked". It is a DISPLAY field, not a decision input.
+
+        Control that makes T3 airtight: keep the license key, uuid and body
+        BYTE-IDENTICAL across runs and vary only one date source, then
+        relaunch. ini fields -> nothing moves; the signed header -> everything
+        moves. Without that control, "new license => new timer" explains T1/T2
+        away and T3 is only correlation.
+
+        Device binding, for completeness:
+           fp = lowercase hex of FNV-1a-64(MachineGuid)  -- 16 chars, NO "0x"
+           compared byte-exact BEFORE verification (mismatch => code=6)
+           stored in the UNSIGNED ini next to the value it protects
+        Key-less hash + plaintext twin = binding in name only.
+
+        Bonus branch: expiry is only consulted when updates maps to 3
+        (sub_1404A60EB: strict->0 rollback->1 lifetime->2 else->3).
+        So updates=lifetime skips the expiry check entirely. The most
+        permissive policy value doubles as the "ignore dates" switch.
+
+ - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+   STATUS CODES (from live instrumentation, not a constant table)
+ - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+         0 / 3   valid (online path)
+         1       valid (offline grace)
+         2       grace period passed
+         4       proof missing or signature verification failed
+         6       device mismatch (also reused for updates==3 && expired)
+
+ - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+   PITFALLS LOGGED DURING THIS ENGAGEMENT
+ - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+        * Single-instance target: a second launch forwards argv to the
+          existing process and exits. An all-zero trace is then read as "the
+          function never ran". Kill first, let the tracer own the spawn.
+        * Byte-exact fingerprint compare: a "0x" prefix is a hard fail.
+          Format errors masquerade as logic errors.
+        * Never pipe evidence through `head` -- SIGPIPE can kill the sampled
+          process mid-run and hand you a false negative.
+        * A second, same-shaped pubkey constant exists in the plugin
+          signature path (VA 0x140B998DD). Same look, different job.
+          Disambiguate by xref, not by shape.
+        * Every address quoted in a report must trace back to evidence.
+          Delete unverified ones; a plausible-but-wrong address is worse than
+          no address at all.
+
+ - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+   REDACTION NOTICE
+ - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+        Not shipped: the target binary, the patched binary, raw evidence,
+        the full client report, the self-signing private key, the real
+        MachineGuid and device fingerprint.
+
+        Redacted in source:  baked pubkey -> <REDACTED_BAKED_PUBKEY>
+                             vendor host / account -> <vendor-host> / <vendor-account>
+                             product + dirs -> <product>
+                             sample MD5 guard -> <sample-md5>
+        Kept on purpose:     offsets, function addresses, the 1209600 constant
+                             -- without them the method is not reproducible.
+
+        src/keygen.py refuses to run while placeholders remain (--check-config
+        lists them) rather than silently patching a wrong offset.
+
+ - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+   FIXING IT (vendor notes)
+ - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+        1. An equal-length-replaceable plaintext anchor is no anchor. Cover it
+           with integrity (code-signing / cross-section hash), or ship it
+           encrypted and unwrapped at runtime, or keep redundant copies and
+           require they agree.
+        2. Never anchor a grace deadline inside material the client can re-sign.
+           Use an anti-rollback monotonic watermark that itself participates in
+           the decision, or a server-signed timestamp.
+        3. Reject future dates. |proof_date - now| beyond a threshold -> refuse.
+        4. Untrusted / absent online recheck must downgrade, not fail-open.
+        5. Device binding needs a key the client does not hold (HMAC/AEAD) or a
+           hardware root of trust. FNV-1a of a registry GUID is a constant.
+        6. Put every license.ini field under signature coverage, or delete it.
+        7. Decouple policy from time: "lifetime updates" must not imply
+           "expiry is not checked".
+
+ - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+   DISCLAIMER
+ - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+        Educational and security-research use only, on a target covered by a
+        written authorization. Commercial exploitation is strictly prohibited.
+        If this software is valuable to your workflow, please purchase a
+        genuine license from the vendor.
+
+ - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+        INT0 RESEARCH GROUP / Seep Reverse Lab
+        Agent-Native Multi-Platform Reverse Engineering Workbench
+
+__________________________________________________________________________

@@ -1,15 +1,36 @@
 // ============================================================================
-//  XYplorer 授权状态本地伪造 PoC —— version.dll (DLL 搜索顺序劫持载体)
+//  <项目A> 授权旁路验证 PoC —— version.dll (DLL 搜索顺序劫持 + 授权状态机热补丁)
 //  ---------------------------------------------------------------------------
-//  用途：白盒审计复现件。放入 XYplorer.exe 同目录后，进程启动即加载本 DLL，
-//        在后台线程把授权状态全局变量改写为 Lifetime License(5)，
-//        并用宿主自身的 SysAllocString 写入伪造许可证名/码。
+//  适配版本：<项目A> 28.40.0100 (twinBASIC 982) & 28.30.2600 (x64)
 //
-//  依据：XYplorer 授权判定完全依赖进程内可写全局变量（CWE-602），
-//        无服务端校验、无签名回执、无一致性自校验。
+//  ★ 授权模型测绘结论（关键）：
+//    宿主存在两级授权变量，二者解耦：
+//      · license_type (int) —— 仅表示注册码前缀分类 xy01..xy05 → 1..5；
+//        由 [Register] Code= 前缀直接决定，**不构成激活判据**。
+//      · 授权状态字 (word) —— 真正的激活开关：
+//            0xFFFF = 试用 / 0x0000 = 已激活
+//        其值在启动时由 `状态字 = NOT(注册加载返回值)` 计算得出（-1 通过 → 0）。
+//    ⇒ 仅写入 license_type=5 只会让「关于」框显示授权信息，
+//      标题栏与试用弹窗链路依旧走试用分支（这正是旧版方案的失效根因）。
 //
-//  构建： rustc --edition 2021 --crate-type cdylib -O -C strip=symbols \
-//                -C panic=abort -o version.dll lib.rs
+//  ★ 本 PoC 的解法（4 处确定性指令级热补丁，无需伪造注册码签名）：
+//    1. `not eax` → `xor eax,eax`   —— 令激活判定恒返回 0x0000(已激活)
+//    2. 前置检查失败分支的 `mov word [rax],0xFFFF` → 写入 0
+//    3. 注册信息为空分支的 `mov word [rax],0xFFFF` → 写入 0
+//    4. 「关于」框许可等级分支无条件进入 Lifetime License
+//    ⇒ 授权状态字恒为 0，宿主自身以「正式授权」姿态渲染全部 UI
+//      （标题栏、启动欢迎链路、试用弹窗均无需任何 UI 化妆品补丁）
+//
+//  ★ 密钥结构（供部署阶段写入 [Register] Code=）：
+//      xy05-<用户数>-<4hex>×5-<重复段>-<版本段>
+//      例：xy05-0100-079F-3AAE-9F8F-6729-51A9-079F-28.40
+//      · 第 2 段 4 位十六进制 = 授权用户数（0100 → 1 用户）
+//      · 第 9 段 = 版本段，需与宿主主次版本一致（28.40 / 28.30）
+//
+//  ★ 自定义授权信息（姓名/密钥）由部署阶段写入宿主配置 [Register] 段，
+//    宿主原生载入并显示，无需运行期改写内存。
+//
+//  ★ 导出并转发系统原版 version.dll 全部 17 个接口，保障宿主基础功能不受损。
 // ============================================================================
 #![allow(non_snake_case, non_camel_case_types, non_upper_case_globals)]
 
@@ -26,50 +47,79 @@ extern "system" {
     fn LoadLibraryExW(name: *const u16, file: *mut c_void, flags: u32) -> Hmod;
     fn GetProcAddress(h: Hmod, name: *const u8) -> *mut c_void;
     fn GetModuleFileNameW(h: Hmod, buf: *mut u16, size: u32) -> u32;
+    fn VirtualProtect(addr: *mut c_void, size: usize, new_prot: u32, old_prot: *mut u32) -> i32;
     fn CreateThread(attr: *mut c_void, size: usize,
                     start: unsafe extern "system" fn(*mut c_void) -> u32,
                     param: *mut c_void, flags: u32, tid: *mut u32) -> *mut c_void;
 }
 
+const PAGE_EXECUTE_READWRITE: u32 = 0x40;
 const LOAD_LIBRARY_SEARCH_SYSTEM32: u32 = 0x0000_0800;
 
-// ---------------------------------------------------------------------------
-// 版本映射表：SizeOfImage 用于识别版本，其余为目标全局变量的 RVA
-// ---------------------------------------------------------------------------
+struct CodePatch {
+    rva: usize,
+    bytes: &'static [u8],
+}
+
 struct Map {
     size_of_image: u32,
-    lic: usize,   // license_type        0=未注册 / 1..5 = xy01..xy05 代次 (5=Lifetime)
-    flag: usize,  // 版本覆盖标志         1=覆盖本版本
-    name: usize,  // 许可证名 WideString 全局
-    code1: usize, // 许可证码 WideString 全局 #1
-    code2: usize, // 许可证码 WideString 全局 #2
-    sysalloc: usize, // OLEAUT32!SysAllocString 的 IAT 槽位
+    lic: usize,
+    flag: usize,
+    act: usize,          // ★ 授权状态字（word）: 0xFFFF=试用 / 0x0000=已激活
+    #[allow(dead_code)] name_g: usize,
+    #[allow(dead_code)] code1_g: usize,
+    #[allow(dead_code)] code2_g: usize,
+    code_patches: &'static [CodePatch],
 }
 
-static MAPS: [Map; 2] = [
-    // XYplorer 28.40.0100
-    Map { size_of_image: 0x0285_0000, lic: 0x22FD724, flag: 0x230170C,
-          name: 0x2235A88, code1: 0x2281C70, code2: 0x21FDDE0,
-          sysalloc: 0x2675408 },
-    // XYplorer 28.30.2600
-    Map { size_of_image: 0x0283_B000, lic: 0x22E4D5C, flag: 0x22E8D44,
-          name: 0x221CEF8, code1: 0x22694A0, code2: 0x21E52F0,
-          sysalloc: 0x265E408 },
+// ── 28.40.0100 授权状态判定引擎热补丁（真·激活）──────────────────────────
+static PATCHES_2840: [CodePatch; 4] = [
+    // 1. 激活判定取反指令消解：not eax -> xor eax,eax
+    //    原语义 状态字 = NOT(注册加载返回值)：-1(通过) → 0x0000(已激活)
+    //    补丁后恒为 0x0000，等价于「注册加载永远通过」
+    CodePatch { rva: 0x670CB1, bytes: &[0x31, 0xC0] },
+    // 2. 前置检查失败分支的试用标记写入 → 改写为 0x0000
+    CodePatch { rva: 0x670BFF, bytes: &[0x66, 0xC7, 0x00, 0x00, 0x00] },
+    // 3. 注册信息为空分支的试用标记写入 → 改写为 0x0000
+    CodePatch { rva: 0x670CD5, bytes: &[0x66, 0xC7, 0x00, 0x00, 0x00] },
+    // 4. 「关于」框许可等级呈现：无条件进入 Lifetime License 分支
+    //    （等级枚举由注册码内嵌签名解码得出，无法离线伪造 → 直接锁定呈现分支）
+    CodePatch { rva: 0x15E2A47, bytes: &[0xE9, 0x40, 0x00, 0x00, 0x00] },
 ];
 
-const FAKE_NAME: &str = "seep";
-const FAKE_CODE: &str = "xy05-Lifetime-License-Pro-seep-poc";
+// ── 28.30.2600 同源热补丁（激活判定指令序列与 28.40 完全同构，偏移差 -0x1039）──
+static PATCHES_2830: [CodePatch; 4] = [
+    CodePatch { rva: 0x66FC6A, bytes: &[0x31, 0xC0] },
+    CodePatch { rva: 0x66FBB8, bytes: &[0x66, 0xC7, 0x00, 0x00, 0x00] },
+    CodePatch { rva: 0x66FC8E, bytes: &[0x66, 0xC7, 0x00, 0x00, 0x00] },
+    CodePatch { rva: 0x15CEA84, bytes: &[0xE9, 0x40, 0x00, 0x00, 0x00] },
+];
 
-// ---------------------------------------------------------------------------
-// 工具
-// ---------------------------------------------------------------------------
+static MAPS: [Map; 2] = [
+    Map {
+        size_of_image: 0x0285_0000,
+        lic: 0x22FD724,
+        flag: 0x230170C,
+        act: 0x230CDEA,
+        name_g: 0x2235A88,
+        code1_g: 0x2281C70,
+        code2_g: 0x21FDDE0,
+        code_patches: &PATCHES_2840,
+    },
+    Map {
+        size_of_image: 0x0283_B000,
+        lic: 0x22E4D5C,
+        flag: 0x22E8D44,
+        act: 0x22F434A,
+        name_g: 0x221CEF8,
+        code1_g: 0x22694A0,
+        code2_g: 0x21E52F0,
+        code_patches: &PATCHES_2830,
+    },
+];
+
 unsafe fn read_u32(p: usize) -> u32 { core::ptr::read_unaligned(p as *const u32) }
 unsafe fn write_u32(p: usize, v: u32) { core::ptr::write_unaligned(p as *mut u32, v) }
-unsafe fn read_u64(p: usize) -> u64 { core::ptr::read_unaligned(p as *const u64) }
-
-fn wide(s: &str) -> Vec<u16> {
-    s.encode_utf16().chain(core::iter::once(0)).collect()
-}
 
 fn log_path() -> Option<std::path::PathBuf> {
     unsafe {
@@ -91,9 +141,16 @@ fn log(msg: &str) {
     }
 }
 
-// ---------------------------------------------------------------------------
-// 核心：定位并改写授权状态
-// ---------------------------------------------------------------------------
+unsafe fn apply_code_patch(addr: usize, bytes: &[u8]) -> bool {
+    let mut old_prot: u32 = 0;
+    if VirtualProtect(addr as *mut c_void, bytes.len(), PAGE_EXECUTE_READWRITE, &mut old_prot) == 0 {
+        return false;
+    }
+    core::ptr::copy_nonoverlapping(bytes.as_ptr(), addr as *mut u8, bytes.len());
+    VirtualProtect(addr as *mut c_void, bytes.len(), old_prot, &mut old_prot);
+    true
+}
+
 unsafe fn pick_map(base: usize) -> Option<&'static Map> {
     let e_lfanew = read_u32(base + 0x3C) as usize;
     if e_lfanew < 0x40 || e_lfanew > 0x1000 { return None; }
@@ -103,7 +160,6 @@ unsafe fn pick_map(base: usize) -> Option<&'static Map> {
             return Some(m);
         }
     }
-    // 兜底：用 license_type 取值合理性判定
     for m in MAPS.iter() {
         let v = read_u32(base + m.lic);
         if v <= 5 { return Some(m); }
@@ -112,85 +168,75 @@ unsafe fn pick_map(base: usize) -> Option<&'static Map> {
 }
 
 unsafe fn patch() -> bool {
-    let base = GetModuleHandleW(core::ptr::null()) as usize;   // 宿主主模块 = XYplorer.exe
+    let base = GetModuleHandleW(core::ptr::null()) as usize;
     if base == 0 { return false; }
     let m = match pick_map(base) { Some(m) => m, None => return false };
 
     let mut changed = false;
 
-    // 1) license_type -> 5 (Lifetime License)
+    // 1. 维持授权全局状态
     if read_u32(base + m.lic) != 5 {
         write_u32(base + m.lic, 5);
         changed = true;
     }
-    // 2) 版本覆盖标志 -> 1 (许可证覆盖当前版本)
     if read_u32(base + m.flag) != 1 {
         write_u32(base + m.flag, 1);
         changed = true;
     }
 
-    // 3) [可选] 借用宿主自带的 SysAllocString 写入伪造许可证名/码
-    //    默认关闭: 宿主按自有字符串管理器释放该 BSTR 会导致堆损坏 (0xC0000374)
-    //    启用方式: 在 DLL 同目录创建空文件 version_poc_strings.enable
-    let enable_strings = std::path::Path::new("version_poc_strings.enable").exists()
-        || log_path().map(|p| p.with_file_name("version_poc_strings.enable").exists()).unwrap_or(false);
-    if !enable_strings {
-        return changed;
-    }
-    let sysalloc = read_u64(base + m.sysalloc) as usize;
-    if sysalloc > 0x10000 && sysalloc < 0x0000_7FFF_FFFF_FFFF {
-        let f: unsafe extern "system" fn(*const u16) -> *mut c_void =
-            core::mem::transmute(sysalloc);
-        let name = wide(FAKE_NAME);
-        let code = wide(FAKE_CODE);
-        let n = f(name.as_ptr()) as usize;
-        let c = f(code.as_ptr()) as usize;
-        if n > 0x10000 {
-            if read_u64(base + m.name) != n as u64 { core::ptr::write_unaligned((base + m.name) as *mut u64, n as u64); changed = true; }
-        }
-        if c > 0x10000 {
-            if read_u64(base + m.code1) != c as u64 { core::ptr::write_unaligned((base + m.code1) as *mut u64, c as u64); changed = true; }
-            if read_u64(base + m.code2) != c as u64 { core::ptr::write_unaligned((base + m.code2) as *mut u64, c as u64); changed = true; }
+    // 2. 执行底层机器码热补丁
+    for p in m.code_patches {
+        let target = base + p.rva;
+        let mut cur = vec![0u8; p.bytes.len()];
+        core::ptr::copy_nonoverlapping(target as *const u8, cur.as_mut_ptr(), p.bytes.len());
+        if cur.as_slice() != p.bytes {
+            apply_code_patch(target, p.bytes);
+            changed = true;
         }
     }
+
     changed
 }
 
-// ---------------------------------------------------------------------------
-// 后台线程：等待宿主初始化后持续维持授权状态（仅在值不一致时写入）
-// ---------------------------------------------------------------------------
 unsafe extern "system" fn worker(_param: *mut c_void) -> u32 {
-    let mut reported = false;
-    for i in 0..2400 {                      // ~20 分钟
-        if patch() && !reported {
-            reported = true;
-            let base = GetModuleHandleW(core::ptr::null()) as usize;
-            let lic = pick_map(base).map(|m| read_u32(base + m.lic)).unwrap_or(0);
-            log(&format!("[+] license state forged: license_type={} name='{}' code='{}'",
-                         lic, FAKE_NAME, FAKE_CODE));
-        }
-        // 启动前 8 秒高频抢占 (每 50ms), 赶在宿主计算标题/授权标签之前落地
-        let d = if i < 160 { 50 } else { 500 };
-        thread::sleep(Duration::from_millis(d));
+    let base = GetModuleHandleW(core::ptr::null()) as usize;
+    let m = match pick_map(base) { Some(m) => m, None => return 0 };
+
+    // 阶段一：覆盖宿主启动初始化窗口（短时高频抢占，仅用于兜底无 [Register] 配置的场景）
+    for _ in 0..160 {
+        patch();
+        thread::sleep(Duration::from_millis(50));
     }
+    // 阶段二：有界维持 8 秒后退出（不常驻线程，零后台开销）
+    for _ in 0..16 {
+        patch();
+        thread::sleep(Duration::from_millis(500));
+    }
+
+    let lic = read_u32(base + m.lic);
+    let act = core::ptr::read_unaligned((base + m.act) as *const u16);
+    log(&format!(
+        "[+] 授权状态机热补丁已生效: license_type={} | 授权状态字=0x{:04X} ({})",
+        lic, act, if act == 0 { "已激活" } else { "试用" }
+    ));
     0
 }
 
-// ---------------------------------------------------------------------------
-// 入口
-// ---------------------------------------------------------------------------
 #[no_mangle]
 pub unsafe extern "system" fn DllMain(_hinst: Hmod, reason: u32, _res: *mut c_void) -> i32 {
-    if reason == 1 {                        // DLL_PROCESS_ATTACH
+    if reason == 1 {
+        log("[*] version.dll (v2.4.0) DllMain 注入成功");
+        // 同步预打一次，确保启动早期第一道逻辑就生效
+        patch();
         let mut tid: u32 = 0;
         CreateThread(core::ptr::null_mut(), 0, worker, core::ptr::null_mut(), 0, &mut tid);
     }
     1
 }
 
-// ---------------------------------------------------------------------------
-// version.dll 导出转发（保证宿主原有功能不受影响）
-// ---------------------------------------------------------------------------
+// ============================================================================
+// version.dll 导出转发
+// ============================================================================
 static mut REAL: Hmod = core::ptr::null_mut();
 
 unsafe fn real() -> Hmod {
