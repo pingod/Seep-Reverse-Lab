@@ -2,8 +2,12 @@
   "mcpServers": {
     "seep": {
       "command": "python",
-      "args": ["Tool/mcp/seep_mcp_server.py"],
-      "env": { "PYTHONIOENCODING": "utf-8" },
+      "args": [
+        "Tool/mcp/seep_mcp_server.py"
+      ],
+      "env": {
+        "PYTHONIOENCODING": "utf-8"
+      },
       "transport": "stdio"
     },
     "js-reverse": {

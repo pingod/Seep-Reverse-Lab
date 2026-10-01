@@ -5,7 +5,7 @@
       "type": "local",
       "command": [
         "python",
-        "<SEEP_ROOT>/Tool/mcp/seep_mcp_server.py"
+        "C:/Users/Angus/Desktop/pi/seep/project/Seep-Reverse-Lab/Tool/mcp/seep_mcp_server.py"
       ],
       "enabled": true,
       "environment": {

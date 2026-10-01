@@ -112,31 +112,24 @@ Claude Code 原生支持项目级上下文（`CLAUDE.md`）与项目级 MCP 注�
 
 ### 3. 🔵 DeepSeek Harness (DSH) 专属接入流程
 
-DeepSeek Harness 采用基于 Cordis 插件协议的 YAML 配置。
+DeepSeek Harness 采用基于 Cordis 插件协议的 YAML 配置。根据 [DSH 官方规范](https://deepseek-harness.github.io/deepseek-harness/guide/mcp-memory)，其补丁机制采用 `- insert:` 语法。
 
-1. **生成可用 Cordis 配置**：
+1. **自动生成官方标准 Cordis Overlay 补丁**：
    在项目根目录下执行：
    ```powershell
    powershell -ExecutionPolicy Bypass -File .\setup\generate-configs.ps1
    ```
-   脚本将在控制台输出当前物理路径完全展开的 YAML 配置块，并在 `setup/cordis.generated.yml` 生成副本。
-2. **导入配置到 DSH Profile**：
-   打开您的 DSH profile 配置文件（或 `cordis.yml`），将 `cordis.generated.yml` 中的内容粘贴到 `plugins` 列表中：
-   ```yaml
-   plugins:
-     - id: seep-mcp
-       name: '@deepseek-ai/dsh-mcp-client'
-       config:
-         serverName: seep
-         transport: stdio
-         command: python
-         args:
-           - 'C:/实际路径/Tool/mcp/seep_mcp_server.py'
-         env:
-           PYTHONIOENCODING: utf-8
-   ```
+   脚本将自动读取当前物理路径并生成已填好真实路径的 `setup/cordis.generated.yml`（采用官方标准的 `- insert:` 顶层语法）。
+2. **挂载运行（两种官方方式二选一）**：
+   - **方式 A（命令行启动热挂载 · 最推荐）**：
+     ```bash
+     dsh web --patch "<SEEP_ROOT>/setup/cordis.generated.yml"
+     ```
+   - **方式 B（写入用户 Profile 持久生效）**：
+     - 若针对单一 profile：将 `setup/cordis.generated.yml` 内容追加合并至 `$DSH_HOME/profiles/<name>/cordis.patch.yml`；
+     - 若针对本机所有 profile：合并至 `$DSH_HOME/cordis.patch.yml`。
 3. **加载核心指令**：
-   将 `Tool/prompts/AGENTS.md` 复制或引用至 DSH 工作目录根路径。
+   将 `Tool/prompts/AGENTS.md` 复制或软链至 DSH 工作目录根路径。
 4. **启动会话并开工**：
    在 DSH 中启动会话，发送 `check` 确认环境连通。
 
@@ -144,19 +137,36 @@ DeepSeek Harness 采用基于 Cordis 插件协议的 YAML 配置。
 
 ### 4. 🟢 Codex / OpenCode 专属接入流程
 
-Codex 与 OpenCode 采用标准工作区配置。
+OpenCode 原生支持项目级与全局级 MCP 工具，其配置标准为 `opencode.jsonc`（顶层为 `"mcp"`，命令为数组格式）。
 
-1. **生成工作区配置文件**：
-   运行 `powershell -ExecutionPolicy Bypass -File .\setup\generate-configs.ps1`，脚本将自动在根目录下生成合规的 `opencode.jsonc`。
-2. **配置说明**：
-   文件内部配置形如：
+1. **自动生成 OpenCode 工作区配置文件**：
+   运行：
+   ```powershell
+   powershell -ExecutionPolicy Bypass -File .\setup\generate-configs.ps1
+   ```
+   脚本将自动在项目根目录下生成合规的 `opencode.jsonc`。
+2. **官方配置规范对照**：
+   生成的文件结构完全符合 [OpenCode 官方 MCP 标准](https://dev.opencode.ai/docs/mcp-servers/)：
    ```jsonc
    {
      "$schema": "https://opencode.ai/config.json",
-     "mcpServers": {
+     "mcp": {
        "seep": {
-         "command": "python",
-         "args": ["C:/实际路径/Tool/mcp/seep_mcp_server.py"],
+         "type": "local",
+         "command": [
+           "python",
+           "C:/实际路径/Tool/mcp/seep_mcp_server.py"
+         ],
+         "enabled": true,
+         "environment": {
+           "PYTHONIOENCODING": "utf-8"
+         }
+       }
+     }
+   }
+   ```
+3. **指令载入与启动**：
+   在项目根目录下直接运行 `opencode`。OpenCode 会自动解析根目录的 `opencode.jsonc` 挂载 23 项 `seep` 工具，并自动加载项目根目录的 `AGENTS.md` 作为作战协议。发送 `check` 即可开启自检！
          "env": { "PYTHONIOENCODING": "utf-8" }
        }
      }
