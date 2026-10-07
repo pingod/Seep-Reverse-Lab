@@ -169,7 +169,7 @@ test_privacy_clean() {
     local hits files
     if [ -d "$ROOT/.git" ]; then
         # 只扫描将被发布的 git 跟踪文件（本地生成物已 gitignore，不属发布范围）
-        files=$(git -C "$ROOT" ls-files 2>/dev/null \
+        files=$(git -c core.quotePath=false -C "$ROOT" ls-files 2>/dev/null \
             | grep -vE '^(setup/verify\.(ps1|sh))$' \
             | grep -vE '^Tool/(upstream|mcp/Tool)/' \
             | grep -vE '\.(exe|dll|so|dylib|jar|zip|7z|png|jpg|jpeg|gif|ico|pdf|bin|dmp|pyc|idb|i64|ttf|woff|woff2)$')
@@ -190,7 +190,7 @@ check_item "脱敏" "个人隐私零残留 (已跟踪文件全深度扫描)" tes
 test_generated_untracked() {
     [ -d "$ROOT/.git" ] || return 0
     local tracked f
-    tracked=$(git -C "$ROOT" ls-files 2>/dev/null)
+    tracked=$(git -c core.quotePath=false -C "$ROOT" ls-files 2>/dev/null)
     for f in opencode.jsonc setup/cordis.generated.yml Tool/scripts/compliance-relay/relay-config.json; do
         if echo "$tracked" | grep -qx "$f"; then return 1; fi
     done

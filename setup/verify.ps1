@@ -462,7 +462,7 @@ Test-CheckItem "脱敏" "个人隐私零残留 (已跟踪文件全深度扫描)"
 
     if (Test-Path (Join-Path $Root '.git')) {
         # 只扫描将被发布的 git 跟踪文件（本地生成物已 gitignore，不属发布范围）
-        $tracked = & git -C $Root ls-files 2>$null
+        $tracked = & git -c core.quotePath=false -C $Root ls-files 2>$null
         if (-not $tracked) { return $true }
         $files = @($tracked |
             Where-Object { $_ -notmatch $PrivacyPathExclude -and $_ -notmatch $PrivacyExtExclude } |
