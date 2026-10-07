@@ -338,7 +338,7 @@ Test-ManualItem "商业软件" "IDA Pro 商业反编译器协同 (需自备独�
         $mcp = Join-Path $env:USERPROFILE '.pi\agent\mcp.json'
         if (Test-Path $mcp) {
             try {
-                $cmd = ((Get-Content $mcp -Raw) | ConvertFrom-Json).mcpServers.ida.command
+                $cmd = ((Get-Content $mcp -Raw -Encoding UTF8) | ConvertFrom-Json).mcpServers.ida.command
                 if ($cmd -and (Test-Path $cmd)) { $found = $true }
             } catch { }
         }
@@ -351,7 +351,7 @@ Test-ManualItem "商业软件" "官方 ida-mcp 接线正确 (uvx + GUI 插件 + 
     $mcp = Join-Path $env:USERPROFILE '.pi\agent\mcp.json'
     if (Test-Path $mcp) {
         try {
-            $e = ((Get-Content $mcp -Raw) | ConvertFrom-Json).mcpServers.ida
+            $e = ((Get-Content $mcp -Raw -Encoding UTF8) | ConvertFrom-Json).mcpServers.ida
             $blob = ($e.command + ' ' + ($e.args -join ' '))
             if ($blob -match 'ida_pro_mcp|13337') { $ok = $false }        # 仍是 mrexodia 旧写法
             if (-not ($e.args -contains 'ida-mcp')) { $ok = $false }
