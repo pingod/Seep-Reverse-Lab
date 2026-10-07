@@ -2,7 +2,7 @@
 name: ida-reverse
 description: 当用户要求“使用 IDA Pro 进行逆向分析”、分析指定可执行文件/库、反编译函数、查找授权/分支判定点时触发此技能。基于官方 Hex-Rays ida-mcp（6 个工具 + ida-domain Python API），无 GUI 也能跑，一条 open_database 即完成加载与自动分析。
 license: MIT
-compatibility: Windows 10 / Windows 11 x64, IDA Pro ≥ 9.4（含 Hex-Rays 与 idalib/）, IDA Python ≥ 3.11, ida-mcp 20260924.x, ida-domain 0.5.x, ida-nexus ≥ 0.13
+compatibility: Windows 10 / Windows 11 x64, IDA Pro ≥ 9.4（含 Hex-Rays 与 idalib/）, IDA Python ≥ 3.11, ida-mcp 20261003.x, ida-domain 0.5.x, ida-nexus ≥ 0.13.3
 ---
 
 # ida-reverse — IDA Pro 自动化逆向战术技能
@@ -261,8 +261,8 @@ foreach ($e in $root.FindAll($TS::Descendants, $ANYCOND)) {
 | IDA 安装根 | `D:\Program Files\IDA Professional 9.4`（见 `%APPDATA%\Hex-Rays\IDA Pro\ida-config.json`） |
 | MCP 桥启动方式 | `uvx ida-mcp stdio --agent=<name>`，`command` 必须是 **绝对路径** `D:\Program Files\Python\Python314\Scripts\uvx.exe` |
 | GUI 插件 | `%APPDATA%\Hex-Rays\IDA Pro\plugins\ida-mcp\`（`ida-plugin.json` + `ida_mcp_plugin.py` + `README.md`）；仓库内置副本在 `Tool\mcp\Tool\safe\ida-mcp-plugin\` |
-| 插件版本约束 | `ida-plugin.json` 明写 **`idaVersions: ">=9.4"`**、`requiresPython: ">=3.11"`、`pythonDependencies: ["ida-nexus>=0.13.0"]` |
-| 插件依赖 | IDA 自带 Python 3.11 里有 `ida-nexus`（0.13.0）/ `ida-domain`（0.5.1）—— **必须装进 IDA 的解释器**，装进系统 Python 无效 |
+| 插件版本约束 | `ida-plugin.json` 明写 **`idaVersions: ">=9.4"`**、`requiresPython: ">=3.11"`、`pythonDependencies: ["ida-nexus>=0.13.3"]` |
+| 插件依赖 | IDA 自带 Python 3.11 里有 `ida-nexus`（0.13.3）/ `ida-domain`（0.5.1）—— **必须装进 IDA 的解释器**，装进系统 Python 无效 |
 | 无头模式 | 只需 IDA 根下有 `idalib/`（9.4 自带）；`ida-domain` 由 uv 环境提供（实测在 `%LOCALAPPDATA%\uv\cache\archive-v0\<hash>\site-packages\`） |
 | 运行痕迹 | `...\IDA Pro\nexus\instances\*.json`（活着的后端）· `nexus\logs\<pid>-*.log`（打印 `http://127.0.0.1:<随机端口>`）· `mcp\sessions\*.jsonl`（execute_python 留痕） |
 | Qoder 侧配置 | `~\.qoder\settings.json` → `mcpServers.ida`；Pi 侧 `~\.pi\agent\mcp.json` → `ida`（`requestTimeoutMs: 420000`） |
@@ -273,7 +273,7 @@ foreach ($e in $root.FindAll($TS::Descendants, $ANYCOND)) {
 
 > ⚠️ **搬动过 python 目录后，pip 的 `Scripts\*.exe` 启动器会静默失效**（exit=1 无输出），
 > 因为它内嵌了旧的绝对解释器路径。修法：在该 Python 里
-> `python.exe -m pip install --force-reinstall --no-deps --no-cache-dir ida-nexus==0.13.0`。
+> `python.exe -m pip install --force-reinstall --no-deps --no-cache-dir ida-nexus==0.13.3`。
 > `ida_nexus._find_console_script()` 会在 IDA 内部 spawn 那个启动器，所以必须可用。
 
 自检脚本：

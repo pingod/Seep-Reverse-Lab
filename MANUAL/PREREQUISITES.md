@@ -49,7 +49,7 @@
 | **apktool** | https://github.com/iBotPeaches/Apktool/releases （`apktool_x.x.x.jar`） | `Tool/mcp/Tool/safe/apktool/` |
 | **playwright-mcp** | `npm i -g @playwright/mcp` | 全局即可 |
 | **uv / uvx**（官方 ida-mcp 启动器） | https://astral.sh/uv （`irm https://astral.sh/uv/install.ps1 \| iex`） | 装到 PATH，`mcp.json` 里写绝对路径 |
-| **ida-nexus** | `pip install "ida-nexus>=0.13.0"`（装进 **IDA 自带的 python311**） | IDA 插件运行时 |
+| **ida-nexus** | `pip install "ida-nexus>=0.13.3"`（装进 **IDA 自带的 python311**） | IDA 插件运行时 |
 | **官方 ida-mcp 插件** | 包内自带 `Tool/mcp/Tool/safe/ida-mcp-plugin/` | 拷到 `%APPDATA%\Hex-Rays\IDA Pro\plugins\` |
 | ~~ida-pro-mcp~~（mrexodia，已废弃） | https://github.com/mrexodia/ida-pro-mcp | 不要再注册进 mcp.json，见 `MANUAL\IDA-PRO.md` |
 

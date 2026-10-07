@@ -157,23 +157,71 @@ if ($idaPy) {
 }
 
 # ---------------------------------------------------------------- 4. GUI 插件
+function Get-PluginVersion([string]$JsonPath) {
+    if (-not (Test-Path $JsonPath)) { return '' }
+    try {
+        $v = (Get-Content $JsonPath -Raw -Encoding UTF8 | ConvertFrom-Json).plugin.version
+        if ($v) { return [string]$v }
+    } catch {}
+    return ''
+}
+
+$zipSrc = ''
+if ($PluginZip -and (Test-Path $PluginZip)) {
+    $zipSrc = $PluginZip
+} elseif (Test-Path $Vendored) {
+    $z = Get-ChildItem (Join-Path $Vendored 'ida-mcp-plugin-*.zip') -ErrorAction SilentlyContinue |
+        Sort-Object Name -Descending | Select-Object -First 1
+    if ($z) { $zipSrc = $z.FullName }
+}
+
+# 内置副本的版本以 zip 内的 ida-plugin.json 为准（zip 才是官方产物，解压副本可能过期）
+$vendorVer = ''
+if ($zipSrc) {
+    try {
+        Add-Type -AssemblyName System.IO.Compression.FileSystem
+        $zip = [System.IO.Compression.ZipFile]::OpenRead($zipSrc)
+        $entry = $zip.Entries | Where-Object { $_.Name -eq 'ida-plugin.json' } | Select-Object -First 1
+        if ($entry) {
+            $sr = New-Object System.IO.StreamReader($entry.Open())
+            $txt = $sr.ReadToEnd(); $sr.Dispose()
+            $vendorVer = [string]((ConvertFrom-Json $txt).plugin.version)
+        }
+        $zip.Dispose()
+    } catch {}
+}
+if (-not $vendorVer) { $vendorVer = Get-PluginVersion (Join-Path $Vendored 'ida-plugin.json') }
+$installedVer = Get-PluginVersion (Join-Path $PluginDst 'ida-plugin.json')
+
+# 只有内置副本比已装的更新（或已装缺失）才动手；同版本或已装更新都保持原样
+$needInstall = $true
+if ($installedVer) {
+    if (-not $vendorVer) { $needInstall = $false }
+    else {
+        try { $needInstall = ([version]$vendorVer) -gt ([version]$installedVer) }
+        catch { $needInstall = ($installedVer -ne $vendorVer) }
+    }
+}
+
 if ($SkipPip) {
     Write-Info '-SkipPip：跳过插件安装'
-} elseif (Test-Path (Join-Path $PluginDst 'ida-plugin.json')) {
-    Write-Ok "GUI 插件已就位: $PluginDst"
+} elseif ($installedVer -and -not $needInstall) {
+    Write-Ok "GUI 插件已是最新（v$installedVer）: $PluginDst"
 } else {
-    $src = $null
-    if ($PluginZip -and (Test-Path $PluginZip)) { $src = $PluginZip }
-    elseif (Test-Path $Vendored) {
-        $z = Get-ChildItem (Join-Path $Vendored 'ida-mcp-plugin-*.zip') -ErrorAction SilentlyContinue | Select-Object -First 1
-        if ($z) { $src = $z.FullName }
+    if ($installedVer) {
+        Write-Info "GUI 插件升级: v$installedVer -> v$vendorVer"
+        $bak = "$PluginDst.prev-v$installedVer"
+        if (-not (Test-Path $bak)) {
+            Copy-Item $PluginDst $bak -Recurse -Force
+            Write-Info "  旧版已存档到 $bak"
+        }
     }
-    if ($src) {
-        Write-Info "解压插件: $src -> $PluginDst"
+    if ($zipSrc) {
+        Write-Info "解压插件: $zipSrc -> $PluginDst"
         New-Item -ItemType Directory -Force -Path $PluginDst | Out-Null
         $tmp = Join-Path $env:TEMP ('ida-mcp-plugin-' + [guid]::NewGuid().ToString('N'))
         try {
-            Expand-Archive -Path $src -DestinationPath $tmp -Force
+            Expand-Archive -Path $zipSrc -DestinationPath $tmp -Force
             Copy-Item (Join-Path $tmp '*') $PluginDst -Recurse -Force
             Write-Ok 'GUI 插件已安装（ida-plugin.json / ida_mcp_plugin.py）'
         } catch { Write-Warn "解压失败: $_" }
@@ -181,7 +229,9 @@ if ($SkipPip) {
     } elseif (Test-Path (Join-Path $Vendored 'ida-plugin.json')) {
         Write-Info "从仓库内置副本安装插件: $Vendored"
         New-Item -ItemType Directory -Force -Path $PluginDst | Out-Null
-        Copy-Item (Join-Path $Vendored '*') $PluginDst -Force
+        Copy-Item (Join-Path $Vendored 'ida-plugin.json') $PluginDst -Force
+        Copy-Item (Join-Path $Vendored 'ida_mcp_plugin.py') $PluginDst -Force
+        Copy-Item (Join-Path $Vendored 'README.md') $PluginDst -Force
         Write-Ok 'GUI 插件已安装'
     } else {
         Write-Warn '找不到插件包（--agent 侧不受影响）'
