@@ -1,4 +1,4 @@
-# Shared parsers for master-route route-scope.md.
+﻿# Shared parsers for master-route route-scope.md.
 # Line-anchored so a hint containing "primary: R11" cannot steal the real PRIMARY.
 function Get-ReverseRouteScopeFields {
     [CmdletBinding()]

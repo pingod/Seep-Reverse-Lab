@@ -1,4 +1,4 @@
-param([Parameter(Mandatory=$true)][string]$Path)
+﻿param([Parameter(Mandatory=$true)][string]$Path)
 $ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName System.Runtime.WindowsRuntime | Out-Null
 $asTaskGeneric = ([System.WindowsRuntimeSystemExtensions].GetMethods() | Where-Object {

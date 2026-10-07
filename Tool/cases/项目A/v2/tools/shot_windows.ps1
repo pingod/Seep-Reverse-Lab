@@ -1,4 +1,4 @@
-# Capture every top-level window of a process via PrintWindow (works even if occluded).
+﻿# Capture every top-level window of a process via PrintWindow (works even if occluded).
 # Usage: powershell -NoProfile -ExecutionPolicy Bypass -File shot_windows.ps1 -TargetPid <pid> -Tag name [-LogDir logs]
 param(
   [Parameter(Mandatory=$true)][int]$TargetPid,

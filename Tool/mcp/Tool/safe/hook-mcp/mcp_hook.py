@@ -1,4 +1,4 @@
-﻿"""
+"""
 Hook MCP Server - APK 逆向分析 + BSH Hook 插件开发工具
 
 使用方式:

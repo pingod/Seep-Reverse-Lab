@@ -9,8 +9,8 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/angusdevgo/seep-reverse-lab"><img src="https://img.shields.io/badge/Release-v1.2.0-brightgreen.svg?style=for-the-badge&logo=github" alt="Release"></a>
-  <a href="https://github.com/angusdevgo/seep-reverse-lab/blob/main/LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg?style=for-the-badge" alt="License"></a>
+  <a href="https://github.com/angusdevgo/seep-reverse-lab"><img src="https://img.shields.io/badge/Release-v1.4.0-brightgreen.svg?style=for-the-badge&logo=github" alt="Release"></a>
+  <a href="https://github.com/angusdevgo/seep-reverse-lab/blob/main/LICENSE"><img src="https://img.shields.io/badge/License-GPL--3.0-blue.svg?style=for-the-badge" alt="License"></a>
   <img src="https://img.shields.io/badge/Platform-Windows%20%7C%20Android%20%7C%20Linux-0078D6?style=for-the-badge&logo=windows" alt="Platform">
   <img src="https://img.shields.io/badge/Architecture-x86%20%7C%20x64%20%7C%20ARM64-orange?style=for-the-badge" alt="Architecture">
 </p>
@@ -39,8 +39,10 @@
 
 ---
 
-> 🔗 **致敬与参考源**：
-> - 移动端逆向工程参考自：[**newliver666/apk-reverse**](https://github.com/newliver666/apk-reverse)。
+> 🔗 **致敬与开源参考源**：
+> - 移动端逆向工程与门禁验证套件源自：[**newliver666/apk-reverse**](https://github.com/newliver666/apk-reverse)（MIT License）。
+> - 安全实验室架构与 Zero-Waste Recon 攻防提效体系： [**GeniusHu-tgty/Open-tgtylab**](https://github.com/GeniusHu-tgty/Open-tgtylab)（GPL-3.0 License）
+> - 攻击网拓扑与 MCP 自动化工具生态：[**LING71671/open-reverselab**](https://github.com/LING71671/open-reverselab)（GPL-3.0 License）
 > - 社区支持与技术讨论：[**LINUX DO**](https://linux.do/)。
 
 ---
@@ -56,7 +58,7 @@
 | 🔧 **工具链高度碎片化** | 23 个 MCP 工具封装 Radare2/JADX/Apktool/Frida，统一调度，零手动切换 |
 | 🧠 **大模型缺乏决断逻辑** | `softseep` 总控：两级自动判型（平台 × 9 类业务）+ 七道门决策树 |
 | 🛡️ **云端模型频繁拒绝** | 三层保险：底座级 `BLOCK_NONE` 注入 + 动态口语合规转译 + 推理级思维重定向 |
-| 📚 **实战经验无法沉淀** | 289 篇战术实战笔记 + 12 大脱敏工业范式 + "先查知识库再动手"强制纪律 |
+| 📚 **实战经验无法沉淀** | 289 篇战术实战笔记 + 15 大脱敏工业范式 + "先查知识库再动手"强制纪律 |
 | 📦 **环境部署摩擦高昂** | 一键 `install.ps1`，原生适配 Pi Agent / Claude Code / DeepSeek Harness / Codex |
 
 ---
@@ -139,7 +141,8 @@ Agent 自主完成：
 - 🔍 **客户端鉴权脆弱性走查（CWE-602）**：分钟级判定受限功能是本地布尔还是服务端权威，规避"伪 VIP 白屏"经典陷阱
 - 🛡️ **Authenticode 数字签名保全**：对具备数字签名的 Windows PE，通过代理 DLL（`version.dll`）劫持在内存打桩，宿主签名完好
 - 🔄 **PoC 自愈循环**：Frida 报错 → 根因映射 → 自动修正代码 → 重跑（最多 3 次，超限后结构化移交人工）
-- 💎 **9 大工业级脱敏范式**：单进程离线 → 多进程 IPC → VM 集中判定 → .NET 算号 → 弱模 RSA 旁路，全覆盖
+- 💎 **15 大工业级脱敏范式**：单进程离线 → 多进程 IPC → VM 集中判定 → .NET 算号 → 弱模 RSA 旁路 → Java 动态插桩 → .NET VM 逆向，全覆盖
+- 🌐 **链路层合规转译中继**：可选的本机回环中继，在请求离开本机前把口语平滑转译为合规术语，覆盖任意支持自定义 `baseUrl` 的 Agent（Pi Agent / Claude Code / Codex）。零新增依赖、零落盘、带上下文注入守卫。
 - 🔌 **离线预置全量内置**：所有工具链物理打包（251 MB），部署后零外网依赖
 
 ---
@@ -160,6 +163,8 @@ Seep\ (251 MB)
 ├── DSH-PROFILE.md                 ← DeepSeek Harness Cordis 插件配置模板
 ├── check.bat                      ← ⭐ 双击一键体检入口（Windows）
 ├── check.ps1                      ← PowerShell 体检入口
+├── VERSION                        ← 当前版本标识
+├── CHANGELOG.md                   ← 面向用户的版本变更日志
 │
 ├── Tool\
 │   ├── skill\                     ← 9 大逆向专业技能
@@ -188,10 +193,14 @@ Seep\ (251 MB)
 │   │   ├── AGENTS.md              ← 跨 Agent 通用指令规范
 │   │   └── extensions\            ← BLOCK_NONE 注入 + 口语合规转译
 │   │
-│   ├── cases\                     ← 12 大脱敏工业案例库（项目 A ~ L，含版本演进归档 v2）
-│   ├── upstream\                  ← apk-reverse 上游开源验证集（MIT）
+│   ├── cases\                     ← 15 大脱敏工业案例库（项目 A ~ O，含版本演进归档 v2）
+│   ├── upstream\                  ← 上游溯源验证层（3大开源项目完整镜像）
+│   │   ├── apk-reverse\           ← newliver666/apk-reverse（Android 逆向与离线测试集）
+│   │   ├── open-tgtylab\          ← GeniusHu-tgty/Open-tgtylab（攻防流水线与提效路由）
+│   │   └── open-reverselab\       ← LING71671/open-reverselab（知识库、boards与工具生态）
 │   ├── docs\                      ← 工程参考文档
 │   └── scripts\                   ← 工作流自动化脚本
+│       └── compliance-relay\      ← 🌐 链路层合规转译中继（纯标准库，三协议）
 │
 ├── setup\                         ← 安装、修复与自检脚本集
 └── MANUAL\                        ← 5 份战术专项 SOP 手册
@@ -246,25 +255,58 @@ Seep\ (251 MB)
 - **操作系统**：Windows 10 / 11 x64（推荐），兼容 Linux / macOS
 - **核心运行时**：Python 3.11+、Node.js 18+、Git
 
-### 2. 一键部署
-在 PowerShell 中进入项目根目录执行：
+### 2. 一键自动化部署 (跨平台支持)
+
+**Windows 环境 (PowerShell)**:
 ```powershell
 cd setup
 powershell -ExecutionPolicy Bypass -File .\install.ps1
 ```
-> **脚本自动完成**：解压内置依赖包 → 校验工具完整性 → 安装 Python mcp 库 → 注册 MCP 服务 → 执行全量自检。
+
+**Linux / macOS 环境 (Bash)**:
+```bash
+chmod +x setup/install.sh
+./setup/install.sh
+```
+
+> **脚本全自动完成**：解压内置依赖包 (`node_modules.zip`) → 校验内置工具完整性 → 安装 Python mcp 库 → 注册 MCP 服务 → 展开绝对物理路径 → 执行全量自检。
 
 ### 3. 多 Agent 接入方式
 
-| 智能体平台 | 指令文件 | MCP 配置 | 接入方式 |
+| 智能体平台 | 核心指令 | MCP 服务配置 | 详细接入步骤 |
 |---|---|---|---|
-| **Pi Agent** | `Tool/prompts/SYSTEM.md` | `~/.pi/agent/mcp.json` | `install.ps1` 自动完成全部配置写入 |
-| **Claude Code** | 项目根 `CLAUDE.md` | 项目根 `.mcp.json` | 在工作台根目录执行 `claude`，自动读取 |
-| **DeepSeek Harness** | `Tool/prompts/AGENTS.md` | `DSH-PROFILE.md` (Cordis YAML) | 指令部署至工作目录 + MCP 插件写入 DSH Profile |
-| **OpenCode / Codex** | 项目根 `AGENTS.md` | 客户端全局配置 | 复制 `AGENTS.md` 至项目工作根目录 |
-| **Qoder** | 项目根 `qoder.md` | 项目根 `.mcp.json` + `.qoder/settings.json` | 在工作台根目录打开 Qoder，`qoder.md` 自动加载、MCP 自动启用 |
+| **Pi Agent** | `Tool/prompts/SYSTEM.md` | `~/.pi/agent/mcp.json` | 运行 `install.ps1` 自动写入，完成后**必须重启当前终端与 Pi 会话**。 |
+| **Claude Code** | 项目根 `CLAUDE.md` | 项目根 `.mcp.json` | 运行 `powershell .\setup\generate-configs.ps1` 自愈绝对路径后，在项目根执行 `claude`。 |
+| **DeepSeek Harness** | `Tool/prompts/AGENTS.md` | `DSH-PROFILE.md` | 运行 `setup\generate-configs.ps1` 生成官方 `- insert:` 语法的 `cordis.generated.yml`，使用 `dsh web --patch ...` 或粘贴进 Profile。 |
+| **OpenCode / Codex** | 项目根 `AGENTS.md` | `opencode.jsonc` | 运行 `setup\generate-configs.ps1` 生成符合 OpenCode 官方标准的 `opencode.jsonc`，在项目根直接启动 `opencode`。 |
+| **Qoder** | 项目根 `qoder.md` | 项目根 `.mcp.json` + `.qoder/settings.json` | 在工作台根目录打开 Qoder，`qoder.md` 自动加载、项目 MCP 自动启用 |
 
-### 4. 部署完备性校验（7 大维度 · 35 项检查）
+> 📖 **咨询级部署与全套排障手册**：关于四大 Agent 的具体配置细则、常见报错（`No module named mcp`、执行策略受限、Java环境缺省等）的解决方案，请详阅 [**MANUAL/DEPLOYMENT.md**](MANUAL/DEPLOYMENT.md)。
+
+### 4. 已有用户如何更新
+
+已经部署过？**不需要重新克隆或手动拷贝文件**。更新脚本是**幂等且无损**的 —— 你的模型凭据与自行添加的 MCP 条目永不会被覆盖。
+
+```powershell
+# Windows
+powershell -ExecutionPolicy Bypass -File .\setup\update.ps1
+```
+```bash
+# Linux / macOS
+./setup/update.sh
+```
+
+它会：自动 stash 本地改动 → `git pull` → 打印变更日志 → 备份配置 → 增量同步 Skill/提示词/MCP → 校验用户数据零丢失 → 跑全量健康体检。
+
+| 参数 | 作用 |
+|---|---|
+| `-DryRun` / `--dry-run` | 只显示将要做什么，不修改任何文件 |
+| `-NoPull` / `--no-pull` | 跳过 `git pull`（适用于压缩包部署） |
+
+> ⚠️ **更新后务必完全重启 Agent 会话**，新 Skill 与扩展才会加载。
+> 各版本变更内容见 [CHANGELOG.md](CHANGELOG.md)。
+
+### 5. 部署完备性校验（8 大维度）
 
 | 方式 | 操作 |
 |---|---|
@@ -312,19 +354,24 @@ powershell -ExecutionPolicy Bypass -File .\install.ps1
 
 **权威归属定性**：断网 + 回环劫持 + 时间戳伪造，分钟级判定本地布尔 vs 服务端权威。
 
-**九大工业级脱敏范式**：
+**十四大工业级脱敏范式**：
 
 | 项目 | 架构类型 | 核心技法 |
 |---|---|---|
 | **A** | 单进程纯离线 PE | 标量返回值强制（`mov eax,1; ret`）|
 | **B** | 多进程复杂拓扑 | 代理 DLL 分流 + 三层状态持久化 (v12.0 → v6.8.1 演进: winhttp 单文件裸桩劫持 + 截断更新) |
 | **C** | 资源模板 + UI 层 | 双射掩码解码 + `SetDlgItemTextW` IAT Hook |
-| **D** | 重编译非均匀位移 | **AOB 双态特征码迁移**（3 版本）+ PE 结构门禁 + ACL 冻结 |
+| **D** | 重编译非均匀位移 | **AOB 双态特征码迁移**（3 版本）+ **可选位点版本自适应** + PE 结构门禁 + **运行时调用栈定位** + ACL 冻结 |
 | **E** | EXECryptor VM 仲裁 | 2 点 Call 指令重定向至内存 Stub |
 | **F** | .NET 动态混淆 | Harmony 内存转储 + 96 位组合哈希算号 |
 | **G** | 自引用 SHA-384 | 5 字节函数入口补丁 + 启动项守护 |
 | **H** | Ed25519 公钥替换 | 密码流推导内置公钥密文替换 |
 | **I** | 弱模 RSA 验签 | CNG 分析 + 滑动窗口旁路 + 导出接口注入 |
+| **J** | 在线卡密 + 网络通信 | 协议解密 + 内存补丁 + 本地凭证伪造 |
+| **K** | .NET WPF + Themida 加固 | 内存转储脱壳 + 特权决策分支走查 + 注册表状态固化 |
+| **L** | Qt5 C++ 客户端 | 代理 DLL Hook + 11 处特权决策常数折叠 + 翻译端点本地 LLM 网关重写 |
+| **M** | Java + install4j 双层架构 | DLL 搜索顺序劫持 (version.dll IAT Hook) + JVM 原生 ClassFile 字节码插桩 (burp.Zfqu / burp.Zwxg.Zu) + 授权状态/AI Token 偏好播种 |
+| **N** | .NET x64 + VM 混淆加固 | 运行时内存抓取 + 特权标志位反转 + 自动静默注入 |
 
 ### 2. Android 移动安全与 DEX/SO 逆向
 - 等长字节 DEX 微创修补，自动重算 Adler-32 / SHA-1
@@ -367,9 +414,12 @@ powershell -ExecutionPolicy Bypass -File .\install.ps1
 
 ---
 
-## 🤝 致谢与社区
+## 🤝 致谢与开源许可 (Acknowledgements & License)
 
-- 特别致谢 [**newliver666/apk-reverse**](https://github.com/newliver666/apk-reverse) 提供的 Android 逆向门控范式与验证体系。
+- **开源协议**：本项目基于 **GNU General Public License v3.0 (GPL-3.0)** 协议全面开源。
+- 特别致谢开源项目 [**newliver666/apk-reverse**](https://github.com/newliver666/apk-reverse)（MIT License）提供的 Android 逆向门控范式与验证体系。
+- 特别致谢开源项目 [**GeniusHu-tgty/Open-tgtylab**](https://github.com/GeniusHu-tgty/Open-tgtylab)（GPL-3.0 License）提供的安全实验室架构与 Zero-Waste Recon 攻防提效体系。
+- 特别致谢开源项目 [**LING71671/open-reverselab**](https://github.com/LING71671/open-reverselab)（GPL-3.0 License）提供的实战攻防知识库、攻击网拓扑与 MCP 自动化工具生态。
 - 感谢 [**LINUX DO**](https://linux.do/) 社区提供的高质量技术交流氛围。
 
 ---

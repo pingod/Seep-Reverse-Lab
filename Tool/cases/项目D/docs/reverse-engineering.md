@@ -328,7 +328,7 @@ def pe_checksum(data, off):
 |---|---|
 | BAK 不存在 | 直接备份 |
 | BAK 版本 == 当前版本 | 保持不变 |
-| BAK 版本 ≠ 当前版本，当前为纯净原版 | 旧备份归档为 `IDMan.exe.BAK.<旧版本>`，写入新备份 |
+| BAK 版本 ≠ 当前版本，当前为纯净原版 | 旧备份归档为 `项目D.exe.BAK.<旧版本>`，写入新备份 |
 | BAK 版本 ≠ 当前版本，当前已含补丁 | **拒绝继续** |
 
 并为「一键还原」加入**版本一致性守卫**。
@@ -385,3 +385,121 @@ foreach (int o in diffs)
 ```
 pip install numpy capstone pefile
 ```
+
+## 7. 运行时定位：当静态追踪撞上 vtable 间接调用
+
+> 本轮修复的核心方法论增量。静态特征码扫描能定位**已知位点**，
+> 但当目标是「**谁在什么条件下弹出这个窗口**」时，静态分析会陷入间接调用的泥潭。
+
+### 7.1 静态路径为何走不通
+
+目标窗口是 Win32 对话框资源，理论上可从资源目录反查调用点：
+
+| 尝试 | 结果 |
+|---|---|
+| 搜索对话框字符串 | **全部失败** —— 资源为英文(1033)，中文来自语言包；注册表键名亦被加密 |
+| 反汇编 `CreateDialogIndirectParamA` 调用点 | 仅 1 处 —— 说明对话框由**统一入口**动态构造 |
+| 反查对话框资源 ID 的写入点 | **0 处** —— ID 经 vtable 传递，无 `call rel32` |
+| 搜索 `call <弹框函数>` | 4 处调用点，但无法判定哪一处是启动路径 |
+
+**卡点本质**：x86 逆向中，成员函数经 vtable / 函数指针传递时，
+静态 xref 会彻底断裂。此时继续静态推演性价比极低。
+
+### 7.2 破局：动态插桩直接抓调用栈
+
+用 Frida 附加目标进程，在**统一对话框入口**下钩子，打印模板标题 + 回溯栈：
+
+```javascript
+var user32 = Process.getModuleByName("user32.dll");
+var api = user32.getExportByName("CreateDialogIndirectParamA");
+Interceptor.attach(api, {
+  onEnter: function (args) {
+    console.log("TITLE=" + JSON.stringify(dumpTitle(args[1])));
+    Thread.backtrace(this.context, Backtracer.FUZZY).slice(0, 16).forEach(function (a) {
+      var m = modOf(a);
+      console.log("   " + a + "  " + m.name + "+0x" + a.sub(m.base).toString(16));
+    });
+  }
+});
+```
+
+**关键技巧：静态 VA 换算**
+
+模块基址随 ASLR 浮动，需把静态 VA 换算成运行时地址：
+
+```javascript
+var delta = Process.enumerateModules()[0].base.sub(ptr("0x400000"));
+function staticAddr(va) { return ptr(va).add(delta); }
+```
+
+**输出（一次命中）**：
+
+```
+TITLE="Internet Download Manager Registration"
+  0x612A0A   CreateDialogIndirectParamA 内部
+  0x618D12
+  0x62F293
+  0x612BB1   DoModal 包装
+  0x62D971
+  0x489683   ← ★ 触发点（即 call 0x612aac 的下一条指令）
+  0x669DCB   ← 该函数的 SEH handler（回溯栈噪声，需排除）
+  0x48E276   ← 真正的调用者
+```
+
+> **陷阱**：MSVC 的 SEH handler 地址会被压栈，回溯时**会混入栈帧**，
+> 必须结合反汇编判断哪些是真调用者（此例 `0x669DCB` 即 `push -1` 后的 SEH 地址）。
+
+### 7.3 从触发点反推判定条件
+
+拿到 `0x48E276` 后回看其所在函数，立刻看到判定链：
+
+```asm
+0048E203  push 0x695e70        ; "SOFTWARE\Internet Download Manager"
+0048E208  push 0x80000002      ; HKEY_CURRENT_USER
+0048E20D  call RegOpenKeyExA
+0048E23C  call RegQueryValueExA ; 读 Serial（新键）
+0048E265  call RegQueryValueExA ; 读 Serial（全局键）
+0048E26D  je   0x48e27b
+0048E271  call 0x489620        ; ← 弹框
+```
+
+### 7.4 运行时读取被加密的字符串
+
+注册表值名在静态数据段中为 **NULL**（运行时初始化），静态读不到。
+直接在判定点下钩子，读全局指针解引用：
+
+```javascript
+Interceptor.attach(sa("0x48E271"), {
+  onEnter: function () {
+    var vp = ptr("0x788604").add(delta).readPointer();
+    console.log("值名 = " + vp.readAnsiString());   // → "Serial"
+  }
+});
+```
+
+**输出**：`[0x788604] 值名指针 = 0x6547270 -> "Serial"`
+
+> 这一步是**定性关键** —— 在此之前所有假设都只是猜测；
+> 读出 `"Serial"` 后，与工具「删除 Serial」的策略一对照，根因瞬间闭合。
+
+### 7.5 假阳性排除纪律
+
+修复上线前必须做**对照组实验**，否则会把测试方法的副作用误判为产品缺陷。
+
+本轮踩坑实录：补丁产物在**孤立目录**运行时弹出
+`cannot find 21 file(s) that are necessary for browser and system integration`。
+
+| 场景 | 集成文件 | 注册弹窗 | 集成告警 |
+|---|---|---|---|
+| 未打补丁原版 @ 孤立目录 | 无 | 有 | 无 |
+| 已打补丁 @ 孤立目录 | 无 | 无 | **有** |
+| **已打补丁 @ 完整目录（191 文件）** | **齐全** | **无** | **无** |
+
+**机理**：补丁让程序正确走「已注册」路径 → 继续执行集成文件自检；
+孤立目录当然自检失败。真实安装目录文件齐全，不会报。
+
+> **纪律**：任何「补丁引入的新现象」都必须先构造**未打补丁对照组** +
+> **完整环境对照组**，三组齐备才能定性。缺一组就可能把测试假阳性当缺陷追一整天。
+
+---
+

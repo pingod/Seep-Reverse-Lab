@@ -29,15 +29,36 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 TOOL_DIR = os.path.join(BASE_DIR, "Tool")
 SAFE_DIR = os.path.join(TOOL_DIR, "safe")
 R2_BIN_DIR = os.path.join(SAFE_DIR, "radare2", "bin")
-R2_EXE = os.path.join(R2_BIN_DIR, "radare2.exe")
-RABIN2_EXE = os.path.join(R2_BIN_DIR, "rabin2.exe")
-RADIFF2_EXE = os.path.join(R2_BIN_DIR, "radiff2.exe")
-RASM2_EXE = os.path.join(R2_BIN_DIR, "rasm2.exe")
-RAHASH2_EXE = os.path.join(R2_BIN_DIR, "rahash2.exe")
 
-JADX_BAT = os.path.join(SAFE_DIR, "jadx", "bin", "jadx.bat")
+def _resolve_binary(tool_name: str) -> str:
+    """跨平台解析可执行工具路径（Windows 优先内置 exe，Linux/macOS 优先查找系统 PATH，fallback 回内置）"""
+    exe_name = f"{tool_name}.exe" if sys.platform == "win32" else tool_name
+    built_in = os.path.join(R2_BIN_DIR, exe_name)
+    if os.path.isfile(built_in) and (sys.platform == "win32" or os.access(built_in, os.X_OK)):
+        return built_in
+    which_path = shutil.which(tool_name)
+    if which_path:
+        return which_path
+    return built_in
+
+R2_EXE = _resolve_binary("radare2")
+RABIN2_EXE = _resolve_binary("rabin2")
+RADIFF2_EXE = _resolve_binary("radiff2")
+RASM2_EXE = _resolve_binary("rasm2")
+RAHASH2_EXE = _resolve_binary("rahash2")
+
+def _resolve_jadx() -> str:
+    """跨平台解析 JADX 启动脚本"""
+    if sys.platform == "win32":
+        bat = os.path.join(SAFE_DIR, "jadx", "bin", "jadx.bat")
+        return bat if os.path.isfile(bat) else (shutil.which("jadx") or bat)
+    else:
+        sh = os.path.join(SAFE_DIR, "jadx", "bin", "jadx")
+        return sh if os.path.isfile(sh) else (shutil.which("jadx") or sh)
+
+JADX_BAT = _resolve_jadx()
 APKTOOL_JAR = os.path.join(SAFE_DIR, "apktool", "apktool.jar")
-APKTOOL_BAT = os.path.join(SAFE_DIR, "apktool", "apktool.bat")
+APKTOOL_BAT = os.path.join(SAFE_DIR, "apktool", "apktool.bat" if sys.platform == "win32" else "apktool")
 
 KB_DIR = os.path.join(TOOL_DIR, "reverselab", "kb")
 LLMS_TXT = os.path.join(TOOL_DIR, "reverselab", "docs", "llms.txt")
@@ -127,7 +148,7 @@ def _java_home_roots() -> list:
 
 
 def _find_java() -> Optional[str]:
-    """寻找 Java 运行时可执行路径"""
+    """寻找 Java 运行时可执行路径（跨平台探测：PATH -> macOS JVM -> Linux JVM -> Windows JDK）"""
     if shutil.which("java"):
         return "java"
     # JAVA_HOME 优先（工具自身的报错文案就是提示设置 JAVA_HOME，原来却没读它）
@@ -136,20 +157,32 @@ def _find_java() -> Optional[str]:
         if os.path.isfile(exe):
             return exe
     candidates = [
+        # Windows
         r"D:\Tool\JDK\bin\java.exe",
         r"D:\Tool\Android Studio\jbr\bin\java.exe",
         r"D:\jdk",
         r"C:\Program Files\Java",
         r"C:\Program Files\Eclipse Adoptium",
-        r"C:\Program Files\Microsoft"
+        r"C:\Program Files\Microsoft",
+        # macOS
+        "/Library/Java/JavaVirtualMachines",
+        "/System/Library/Frameworks/JavaVM.framework",
+        "/opt/homebrew/opt/openjdk/bin/java",
+        "/usr/local/opt/openjdk/bin/java",
+        # Linux
+        "/usr/lib/jvm",
+        "/usr/java"
     ]
     for c in candidates:
-        if os.path.isfile(c):
+        if os.path.isfile(c) and (sys.platform == "win32" or os.access(c, os.X_OK)):
             return c
         if os.path.isdir(c):
+            bin_name = "java.exe" if sys.platform == "win32" else "java"
             for root, _, files in os.walk(c):
-                if "java.exe" in files:
-                    return os.path.join(root, "java.exe")
+                if bin_name in files:
+                    full_p = os.path.join(root, bin_name)
+                    if sys.platform == "win32" or os.access(full_p, os.X_OK):
+                        return full_p
     return None
 
 

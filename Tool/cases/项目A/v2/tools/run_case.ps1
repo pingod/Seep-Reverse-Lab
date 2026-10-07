@@ -1,4 +1,4 @@
-# Run one <项目A> case: start, wait, screenshot, dump key globals, optionally kill.
+﻿# Run one <项目A> case: start, wait, screenshot, dump key globals, optionally kill.
 # Usage:
 #   powershell -NoProfile -ExecutionPolicy Bypass -File run_case.ps1 -Exe <path> -Tag baseline [-Args '...'] [-WaitSec 15] [-Kill]
 param(

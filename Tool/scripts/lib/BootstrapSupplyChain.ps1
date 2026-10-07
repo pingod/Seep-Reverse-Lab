@@ -1,4 +1,4 @@
-function Ensure-Pnpm {
+﻿function Ensure-Pnpm {
     Ensure-NodeRuntime
     $dependency = Get-BootstrapDependency -Name 'pnpm'
     $pnpm = Get-NodeCommandPath -Name 'pnpm'

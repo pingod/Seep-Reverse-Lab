@@ -9,8 +9,8 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/angusdevgo/seep-reverse-lab"><img src="https://img.shields.io/badge/Release-v1.2.0-brightgreen.svg?style=for-the-badge&logo=github" alt="Release"></a>
-  <a href="https://github.com/angusdevgo/seep-reverse-lab/blob/main/LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg?style=for-the-badge" alt="License"></a>
+  <a href="https://github.com/angusdevgo/seep-reverse-lab"><img src="https://img.shields.io/badge/Release-v1.4.0-brightgreen.svg?style=for-the-badge&logo=github" alt="Release"></a>
+  <a href="https://github.com/angusdevgo/seep-reverse-lab/blob/main/LICENSE"><img src="https://img.shields.io/badge/License-GPL--3.0-blue.svg?style=for-the-badge" alt="License"></a>
   <img src="https://img.shields.io/badge/Platform-Windows%20%7C%20Android%20%7C%20Linux-0078D6?style=for-the-badge&logo=windows" alt="Platform">
   <img src="https://img.shields.io/badge/Architecture-x86%20%7C%20x64%20%7C%20ARM64-orange?style=for-the-badge" alt="Architecture">
 </p>
@@ -40,7 +40,9 @@
 ---
 
 > 🔗 **Attribution & Reference Sources**:
-> - Mobile reverse engineering methodology referenced from: [**newliver666/apk-reverse**](https://github.com/newliver666/apk-reverse).
+> - Mobile reverse engineering methodology & verification test suite referenced from: [**newliver666/apk-reverse**](https://github.com/newliver666/apk-reverse) (MIT License).
+> - Security research lab framework, Zero-Waste Recon signal routing & agent execution protocols referenced from: [**GeniusHu-tgty/Open-tgtylab**](https://github.com/GeniusHu-tgty/Open-tgtylab) (GPL-3.0 License).
+> - Reverse engineering knowledge base, attack graph boards & MCP automation ecosystem referenced from: [**LING71671/open-reverselab**](https://github.com/LING71671/open-reverselab) (GPL-3.0 License).
 > - Community support & technical discussions: [**LINUX DO**](https://linux.do/).
 
 ---
@@ -58,7 +60,7 @@ Users provide plain-language technical goals; the agent autonomously performs pl
 | 🔧 **Toolchain Fragmentation** | 23 MCP tools wrapping Radare2, JADX, Apktool, Frida — unified API, zero manual switching |
 | 🧠 **Agent Decision Drift** | `softseep` orchestrator: two-stage auto-classification (Platform × 9 Task Types) + 7-gate decision tree |
 | 🛡️ **Model Refusal in Security Audits** | Three-tier mitigation: `BLOCK_NONE` injection + transparent terminology mapping + cognitive redirection |
-| 📚 **Ephemeral Knowledge** | 289 technical field journals + 12 desensitized industrial paradigms + "search KB before executing" enforced discipline |
+| 📚 **Ephemeral Knowledge** | 289 technical field journals + 15 desensitized paradigms + "search KB before executing" enforced discipline |
 | 📦 **Setup Friction** | One-click `install.ps1` → supports Pi Agent, Claude Code, DeepSeek Harness (DSH), Codex / OpenCode |
 
 ---
@@ -141,7 +143,8 @@ The agent autonomously:
 - 🔍 **CWE-602 Authorization Audit**: Minutes to determine if a feature gate is local-boolean or server-authoritative
 - 🛡️ **Authenticode Signature Preservation**: DLL search-order hijacking (`version.dll` / `sentry.dll`) keeps host binary signature intact
 - 🔄 **PoC Self-Healing Loop**: Frida error → root-cause mapping → auto-fix → re-execute (up to 3 attempts, then structured handoff)
-- 💎 **9 Industrial Architecture Paradigms**: Monolithic offline PE → multi-process IPC → VM arbitration → .NET keygen → weak RSA bypass *(fully desensitized)*
+- 💎 **14 Industrial Architecture Paradigms**: Monolithic offline PE → multi-process IPC → VM arbitration → .NET keygen → weak RSA bypass → Java agent → .NET VM bypass *(fully desensitized)*
+- 🌐 **Transport-Layer Compliance Relay**: Optional localhost relay rewrites colloquial user input into compliant terminology before it leaves the machine — covering any Agent that supports a custom `baseUrl` (Pi Agent / Claude Code / Codex). Zero new dependencies, zero disk writes, context-injection guarded.
 - 🔌 **Offline-Ready**: All toolchains pre-bundled (251 MB), zero network dependencies after setup
 
 ---
@@ -162,6 +165,8 @@ Seep\ (251 MB)
 ├── DSH-PROFILE.md                 ← DeepSeek Harness Cordis plugin config template
 ├── check.bat                      ← ⭐ Double-click one-shot health verifier (Windows)
 ├── check.ps1                      ← PowerShell health verifier entry point
+├── VERSION                        ← Current version marker
+├── CHANGELOG.md                   ← User-facing release notes
 │
 ├── Tool\
 │   ├── skill\                     ← 9 specialized reverse engineering skills
@@ -191,10 +196,14 @@ Seep\ (251 MB)
 │   │   ├── AGENTS.md              ← Cross-agent portable instructions
 │   │   └── extensions\            ← BLOCK_NONE injection + terminology mapping
 │   │
-│   ├── cases\                     ← 12 desensitized industrial paradigm projects (A ~ L, incl. version-evolution archive v2)
-│   ├── upstream\                  ← apk-reverse offline verification test suite (MIT)
+│   ├── cases\                     ← 15 desensitized industrial paradigm projects (A ~ O, incl. version-evolution archive v2)
+│   ├── upstream\                  ← Upstream verification & attribution layer (3 Full mirrors)
+│   │   ├── apk-reverse\           ← newliver666/apk-reverse (Android RE & offline test suite)
+│   │   ├── open-tgtylab\          ← GeniusHu-tgty/Open-tgtylab (Security lab framework & workflows)
+│   │   └── open-reverselab\       ← LING71671/open-reverselab (Knowledge base, boards & MCP ecosystem)
 │   ├── docs\                      ← Engineering reference docs
 │   └── scripts\                   ← Workspace automation scripts
+│       └── compliance-relay\      ← 🌐 Transport-layer compliance relay (stdlib-only, 3 protocols)
 │
 ├── setup\                         ← Automated install, repair & self-check scripts
 └── MANUAL\                        ← 5 Tactical SOP guides
@@ -249,27 +258,60 @@ The bundled `seep` MCP server exposes **23 native tools** across five functional
 - **OS**: Windows 10 / 11 x64 (recommended) or compatible Linux / macOS
 - **Runtimes**: Python 3.11+, Node.js 18+, Git
 
-### 2. One-Click Setup
-Open an elevated PowerShell terminal, navigate to the project root, and run:
+### 2. One-Click Setup (Cross-Platform)
+
+**Windows (PowerShell)**:
 ```powershell
 cd setup
 powershell -ExecutionPolicy Bypass -File .\install.ps1
 ```
-> **What this does automatically**: Unpacks dependency archives → validates pre-bundled tools → installs Python `mcp` libraries → registers MCP servers → runs full self-check.
+
+**Linux / macOS (Bash)**:
+```bash
+chmod +x setup/install.sh
+./setup/install.sh
+```
+
+> **What this does automatically**: Unpacks dependency archives (`node_modules.zip`) → validates pre-bundled tools → installs Python `mcp` libraries → registers MCP servers → resolves physical paths → runs full self-check.
 
 ### 3. Multi-Agent Setup
 
-| Agent | Instruction File | MCP Config | How to Activate |
+| Agent | Instruction File | MCP Config | Setup Procedure |
 |---|---|---|---|
-| **Pi Agent** | `Tool/prompts/SYSTEM.md` | `~/.pi/agent/mcp.json` | `install.ps1` writes everything automatically |
-| **Claude Code** | `CLAUDE.md` (project root) | `.mcp.json` (project root) | Run `claude` in workspace root — auto-loaded |
-| **DeepSeek Harness** | `Tool/prompts/AGENTS.md` | `DSH-PROFILE.md` (Cordis YAML) | Copy instructions + paste plugin config to DSH profile |
-| **OpenCode / Codex** | `AGENTS.md` (project root) | Client global config | Copy `Tool/prompts/AGENTS.md` to project root |
-| **Qoder** | `qoder.md` (project root) | `.mcp.json` (project root) + `.qoder/settings.json` | Open workspace root in Qoder — `qoder.md` auto-loads, MCP auto-enabled |
+| **Pi Agent** | `Tool/prompts/SYSTEM.md` | `~/.pi/agent/mcp.json` | `install.ps1` writes user configs & skills automatically. **Restart Pi** after installation. |
+| **Claude Code** | `CLAUDE.md` (project root) | `.mcp.json` (project root) | Run `powershell .\setup\generate-configs.ps1` to resolve paths, then launch `claude` in root. |
+| **DeepSeek Harness** | `Tool/prompts/AGENTS.md` | `DSH-PROFILE.md` | Run `setup\generate-configs.ps1` to produce `cordis.generated.yml` (official `- insert:` format), use `dsh web --patch ...` or paste into profile. |
+| **OpenCode / Codex** | `AGENTS.md` (project root) | `opencode.jsonc` | Generated by `setup\generate-configs.ps1` (compliant with official OpenCode `mcp` schema), launch `opencode` in root. |
+| **Qoder** | `qoder.md` (project root) | `.mcp.json` (project root) + `.qoder/settings.json` | Open the workspace root in Qoder — `qoder.md` auto-loads, project MCP servers are enabled automatically. |
 
-### 4. Verify Your Deployment
+> 📖 **Comprehensive Multi-Agent Guide**: For detailed step-by-step setup, cross-platform caveats, and exhaustive troubleshooting FAQ, see [**MANUAL/DEPLOYMENT.md**](MANUAL/DEPLOYMENT.md).
 
-Run the 7-section health verifier (35 checks) using any of these methods:
+### 4. Updating an Existing Installation
+
+Already deployed? No need to re-clone or copy files by hand. The updater is **idempotent and lossless** — your model credentials and any custom MCP servers you added are never overwritten.
+
+```powershell
+# Windows
+powershell -ExecutionPolicy Bypass -File .\setup\update.ps1
+```
+```bash
+# Linux / macOS
+./setup/update.sh
+```
+
+It will: stash local changes → `git pull` → print the changelog → back up your config → incrementally sync skills/prompts/MCP entries → verify user data was preserved → run the full health check.
+
+| Flag | Effect |
+|---|---|
+| `-DryRun` / `--dry-run` | Show what would happen, modify nothing |
+| `-NoPull` / `--no-pull` | Skip `git pull` (for ZIP-based installs) |
+
+> ⚠️ **Always fully restart your Agent session** after updating so the new skills and extensions load.
+> See [CHANGELOG.md](CHANGELOG.md) for what changed in each version.
+
+### 5. Verify Your Deployment
+
+Run the 7-section health verifier (37 checks) using any of these methods:
 
 | Method | Command |
 |---|---|
@@ -317,19 +359,24 @@ Deactivate: exit lab
 
 **Authority Attribution**: Airplane mode + loopback hijacking + timestamp offset testing to classify gates as server-authoritative vs. local-boolean within minutes.
 
-**Nine Industrial Paradigms** — all fully desensitized:
+**Fourteen Industrial Paradigms** — all fully desensitized:
 
 | Project | Architecture | Key Technique |
 |---|---|---|
 | **A** | Monolithic offline PE | Scalar return override (`mov eax,1; ret`) |
 | **B** | Multi-process hybrid | Proxy DLL dispatch + 3-tier state persistence (v12.0 → v6.8.1 evolution: single winhttp naked thunk hijack + auto-update blocker) |
 | **C** | Resource template + UI | Bijective bit-permutation decoding + IAT hook on `SetDlgItemTextW` |
-| **D** | Recompile-induced non-uniform shift | **AOB dual-state signature migration** (3 versions) + PE gating + ACL locking |
+| **D** | Recompile-induced non-uniform shift | **AOB dual-state signature migration** (3 versions) + PE gating + ACL locking + **optional-site version adaptation** + **runtime call-stack locating** |
 | **E** | EXECryptor VM arbitration | 2-point Call redirection to memory stubs |
 | **F** | .NET dynamic deobfuscation | Harmony memory dump + 96-bit combined hash keygen |
 | **G** | Self-referential SHA-384 | 5-byte function-entry patch + watchdog persistence |
 | **H** | Ed25519 pubkey replacement | In-place ciphertext replacement via derived keystream |
 | **I** | Weak-modulus RSA | Sliding-window bypass + activation injection on export entry |
+| **J** | Online Card/Key Authorization | Protocol decryption + memory patching + local credential spoofing |
+| **K** | .NET WPF + Themida Packing | Memory dump unpacking + privilege decision branching + registry state freeze |
+| **L** | Qt5 C++ Client | Proxy DLL hook + 11 privilege decision constant-folds + local LLM translation gateway |
+| **M** | Java + install4j Dual-Layer | DLL search-order hijack (version.dll IAT hook) + JVM native ClassFile bytecode patching (burp.Zfqu / burp.Zwxg.Zu) + license/AI token preference seeding |
+| **N** | .NET x64 + VM Obfuscation | Runtime memory extraction + privilege flag inversion + silent auto-injection |
 
 ### 2. Android & DEX/SO Analysis
 - Surgical DEX same-length patching with automated Adler-32 / SHA-1 recalculation
@@ -374,9 +421,12 @@ All client-side vulnerability assessments follow a consulting-grade 3-part struc
 
 ---
 
-## 🤝 Acknowledgements & Community
+## 🤝 Acknowledgements & License
 
-- Special thanks to [**newliver666/apk-reverse**](https://github.com/newliver666/apk-reverse) for the foundational Android reverse engineering paradigm and verification methodology.
+- **License**: This project is licensed under the **GNU General Public License v3.0 (GPL-3.0)**.
+- Special thanks to [**newliver666/apk-reverse**](https://github.com/newliver666/apk-reverse) (MIT License) for the foundational Android reverse engineering paradigm and verification methodology.
+- Special thanks to [**GeniusHu-tgty/Open-tgtylab**](https://github.com/GeniusHu-tgty/Open-tgtylab) (GPL-3.0 License) for the security research lab framework and Zero-Waste Recon routing architecture.
+- Special thanks to [**LING71671/open-reverselab**](https://github.com/LING71671/open-reverselab) (GPL-3.0 License) for the comprehensive reverse engineering knowledge base, attack boards, and MCP automation ecosystem.
 - Gratitude to the [**LINUX DO**](https://linux.do/) community for technical exchange, insight, and research collaboration.
 
 ---
@@ -389,3 +439,15 @@ All client-side vulnerability assessments follow a consulting-grade 3-part struc
 - **No Warranty**: All methodologies are provided "as is" based on sandbox measurements.
 - **Isolated Testing**: Conduct all analysis in isolated VMs or sandboxes. Testing against production systems or unauthorized networks is prohibited.
 - **Limitation of Liability**: Authors assume no liability for misuse, unauthorized testing, or violations of applicable laws.
+
+---
+
+## ⭐ Star History
+
+<a href="https://www.star-history.com/?repos=angusdevgo%2FSeep-Reverse-Lab&type=timeline&logscale=&releases=&legend=bottom-right">
+ <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=angusdevgo/Seep-Reverse-Lab&type=timeline&theme=dark&logscale&legend=top-left" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=angusdevgo/Seep-Reverse-Lab&type=timeline&logscale&legend=top-left" />
+   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=angusdevgo/Seep-Reverse-Lab&type=timeline&logscale&legend=top-left" />
+ </picture>
+</a>

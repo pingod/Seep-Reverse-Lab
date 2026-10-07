@@ -210,3 +210,124 @@ AES IV  = a + c + d + b     // 16 字节
 4. **"内嵌加密程序集"是常见盲区**：核心逻辑若在运行期 `Assembly.Load(byte[])` 加载，则静态分析必然扑空；务必在进程内 dump 该程序集
 5. **客户端单字段判据 = 一击必杀**：`public static int Days` 这类设计使一次反射写值即可永久解锁，且可对抗任何服务端回写
 6. **云控复核必须实测时长**：仅伪造许可时漏洞"看起来成立"，实际会在 1~2 分钟后被服务端回写清除 —— 必须做**长时间稳定性验证**才能确认漏洞真实可利用性
+
+---
+
+## 七、云控截断能力实测与边界（重要 · 修正结论）
+
+### 7.1 云控复核链路（实测还原）
+
+应用存在**多条网络路径**，仅靠托管层拦截**无法完全截断**：
+
+| 路径 | 实现方式 | 托管层拦截是否有效 |
+|---|---|---|
+| 经 `WebRequest.DefaultWebProxy` | .NET 默认代理 | ✅ `IWebProxy` 可拦 |
+| 显式走系统代理 | `GetSystemWebProxy()` / 直接设 `request.Proxy` | ❌ 绕过 `DefaultWebProxy` |
+| **自行解析域名后直连 IP** | raw socket / 自建连接 | ❌ 绕过代理层 |
+| **自建 TLS 栈（`SslStream`）** | 不经 `ServicePoint` | ❌ 绕过证书回调 |
+
+**实测证据**（对照实验）：
+
+```
+# 加固前
+123.57.207.155:443/Established      ← 直连服务器 IP，绕过系统代理
+2409:8c00:6c21:...:443/Established  ← IPv6 直连
+
+# 加固后（加入域名+IP 双重黑名单）
+127.0.0.1:7897/Established          ← 直连 IP 已消失，但改走系统代理
+127.0.0.1:9/SynSent                 ← 死端口仅拦到部分请求
+（日志中 "cloud TLS veto" 零次）      ← TLS 回调从未触发 → 应用自建 TLS 栈
+```
+
+### 7.2 三层拦截能力矩阵
+
+| 层 | 机制 | 覆盖范围 | 实测 |
+|---|---|---|---|
+| L1 | `IWebProxy`（默认代理） | 走 `DefaultWebProxy` 的请求 | ✅ 生效 |
+| L2 | `ServicePointManager.ServerCertificateValidationCallback`（域名 + 解析 IP 黑名单） | 走 `HttpWebRequest`/`ServicePoint` 的请求 | ⚠️ 仅覆盖托管栈 |
+| L3 | `App.Days` 内存锁 + 许可看门狗 | 内存态与磁盘态 | ✅ 生效（许可全程未被改写） |
+
+**结论：托管层拦截只能「大幅削弱」云控，无法「完全截断」。**
+
+### 7.3 彻底截断方案（OS 层，唯一可靠路径）
+
+要让**所有路径**（HTTP/HTTPS、代理/直连、托管栈/自建栈）全部断掉，必须下沉到 OS 层：
+
+```powershell
+# 需管理员，一次性
+Add-Content -Path "$env:WINDIR\System32\drivers\etc\hosts" -Value @"
+127.0.0.1 <vendor-domain>
+127.0.0.1 www.<vendor-domain>
+"@
+ipconfig /flushdns
+```
+
+**原理**：DNS 解析直接返回 `127.0.0.1` → 应用无论用哪条路径都只能连本机 443（无监听）→ 必然失败。
+这条路**无法被应用层绕过**，是唯一 100% 可靠的截断方式。
+
+### 7.4 诚实的最终评价
+
+| 维度 | 结论 |
+|---|---|
+| 许可伪造（永久授权） | ✅ 完全有效 |
+| 直连 IP 云控通道 | ✅ 已截断（IP 黑名单） |
+| 托管栈云控通道 | ✅ 已截断 |
+| 自建 socket/TLS 云控通道 | ❌ **未截断**（需 hosts 层） |
+| 全机 .NET 环境污染 | ✅ 已根治（见第八章） |
+
+---
+
+## 八、⚠️ 安全设计事故与整改（必读）
+
+### 8.1 事故描述
+
+早期版本实现了 `SelfPersist()`，把 `APPDOMAIN_MANAGER_ASM` / `APPDOMAIN_MANAGER_TYPE`
+写入 `HKCU\Environment` 并广播 `WM_SETTINGCHANGE`，企图实现「只需一个 DLL」的零配置注入。
+
+**后果（严重）**：`APPDOMAIN_MANAGER_*` 是 **CLR 级引导变量**。一旦持久化，
+之后启动的**每一个 .NET 程序**（PowerShell / 资源管理器 / 第三方文件管理器 / pythonw …）
+都会被强制加载本 DLL；而那些进程目录里没有该 DLL，于是 CLR 启动阶段：
+
+```
+System.IO.FileNotFoundException  →  System.TypeLoadException
+   在 System.AppDomain.CreateAppDomainManager()
+Starting the CLR failed with HRESULT 80131522   (COR_E_TYPELOAD)
+```
+
+表现为**「窗口一闪而过」**，实测共 **82 个进程**受影响。
+
+### 8.2 整改措施
+
+| # | 措施 | 说明 |
+|---|---|---|
+| 1 | **删除 `SelfPersist()`** | 本 DLL 从此**不再写入任何全局环境变量** |
+| 2 | **新增 `IsTargetProcess()` 进程白名单守卫** | 仅在 `MainModule.FileName` 以目标程序名结尾时才动作；否则立即 `return` |
+| 3 | **所有脚本只读/只清** | `install.ps1` / `uninstall.ps1` 对全局变量**零写入** |
+| 4 | **引导改为进程级启动器** | 环境变量仅在启动器子进程内生效，不落盘、不广播 |
+
+```csharp
+static bool IsTargetProcess()
+{
+    Process cur = Process.GetCurrentProcess();
+    string exe = cur.MainModule != null ? cur.MainModule.FileName : cur.ProcessName + ".exe";
+    bool ok = exe.EndsWith(TARGET_EXE, StringComparison.OrdinalIgnoreCase);
+    if (!ok) Log("skip: 非目标进程，本 DLL 不执行任何动作 -> " + exe);
+    return ok;
+}
+```
+
+### 8.3 设计铁律
+
+> **CLR 级引导变量（`APPDOMAIN_MANAGER_*`、`COR_PROFILER*`、`COR_ENABLE_PROFILING`）
+> 绝不可持久化。**
+> 这类注入只能走**进程级**通道，否则会污染全机所有 .NET 程序，
+> 造成大范围应用崩溃 —— 这是不可接受的设计代价。
+
+### 8.4 事故排查方法论（可复用）
+
+1. **症状**：某类程序集体「窗口一闪而过」
+2. **定位**：查 `.NET Runtime` 事件日志中的 `TypeLoadException` + `CreateAppDomainManager`
+3. **关键线索**：`Starting the CLR failed with HRESULT 80131522`（`COR_E_TYPELOAD`）
+4. **验证**：清掉 `APPDOMAIN_MANAGER_*` 后重测 —— 若恢复正常即确认
+5. **注意**：注册表清干净后，**已运行进程的环境块仍带毒**（尤其系统外壳进程），
+   需**重启**才能彻底恢复

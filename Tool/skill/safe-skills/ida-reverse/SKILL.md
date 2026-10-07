@@ -84,7 +84,7 @@ description: |
 
 **调用方式**：
 ```
-powershell -File "C:\\Users\\Angus\\Desktop\\grok\\nx\\Tool\\skills\ida-reverse\scripts\start.ps1"
+powershell -File "<WORKSPACE>\\Tool\\skills\ida-reverse\scripts\start.ps1"
 ```
 
 ### open.ps1 — 打开二进制文件
@@ -103,7 +103,7 @@ powershell -File "C:\\Users\\Angus\\Desktop\\grok\\nx\\Tool\\skills\ida-reverse\
 
 **调用方式**：
 ```
-powershell -File "C:\\Users\\Angus\\Desktop\\grok\\nx\\Tool\\skills\ida-reverse\scripts\open.ps1" -Path "C:\path\to\file.exe"
+powershell -File "<WORKSPACE>\\Tool\\skills\ida-reverse\scripts\open.ps1" -Path "C:\path\to\file.exe"
 ```
 
 **可选参数**：

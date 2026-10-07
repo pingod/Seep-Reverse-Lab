@@ -2711,9 +2711,16 @@ namespace IDM_Toolkit_Wpf
         public int    PatchOffset;   // 补丁字节在特征码内的偏移
         public byte[] Expected;      // 期望的原始字节（冗余校验，双保险）
         public byte[] Patch;         // 写入的补丁字节
+        public bool   Optional;      // 可选位点：未命中时跳过，不阻断整体写入
 
         public AobPoint(string name, string sigOriginalHex, string sigPatchedHex,
                         int patchOffset, string expectedHex, string patchHex)
+            : this(name, sigOriginalHex, sigPatchedHex, patchOffset, expectedHex, patchHex, false)
+        {
+        }
+
+        public AobPoint(string name, string sigOriginalHex, string sigPatchedHex,
+                        int patchOffset, string expectedHex, string patchHex, bool optional)
         {
             this.Name        = name;
             this.SigOriginal = HexToBytes(sigOriginalHex);
@@ -2721,6 +2728,7 @@ namespace IDM_Toolkit_Wpf
             this.PatchOffset = patchOffset;
             this.Expected    = HexToBytes(expectedHex);
             this.Patch       = HexToBytes(patchHex);
+            this.Optional    = optional;
         }
 
         internal static byte[] HexToBytes(string hex)
@@ -2962,6 +2970,16 @@ namespace IDM_Toolkit_Wpf
                 "7200000000002E3F415643446F776E6C6F6164436F6D706F6E656E7473404000000001000000010000001E000000",
                 "7200000000002E3F415643446F776E6C6F6164436F6D706F6E656E747340400000000100000000000000FFFFFF7F",
                 38, "010000001E000000", "00000000FFFFFF7F"),
+
+            // ── 可选位点：仅 项目D 6.43 build 11.3+ 新增的“Serial 缺失 → 弹注册对话框”对抗逻辑 ──
+            // build 11.3 新增：启动时若注册表不存在 Serial 值，则直接弹出注册对话框（资源 138）。
+            // 该分支在 b10 / 11.2 中仅作句柄清理，不会弹框，故本特征码在那两个版本上零命中，
+            // 由 Optional 机制自动跳过。原始 `je` 改为 `jmp`，使流程永远走“Serial 已存在”路径。
+            new AobPoint(
+                "注册对话框抑制 (Serial缺失分支, 可选)",
+                "8B0DE86C780051FF150440690085C0740C",
+                "8B0DE86C780051FF150440690085C0EB0C",
+                15, "74", "EB", true),
         };
 
         // 向后兼容：旧代码引用的 RulesCount
@@ -3001,7 +3019,12 @@ namespace IDM_Toolkit_Wpf
         public static bool ScanAll(byte[] data, Action<string> logFn, out AobHit[] hits)
         {
             hits = new AobHit[POINTS.Length];
-            int resolved = 0;
+            int resolved   = 0;   // 已处理位点数（含可选跳过）
+            int required   = 0;   // 必需位点总数
+            int requiredOk = 0;   // 必需位点已解决数
+
+            for (int i = 0; i < POINTS.Length; i++)
+                if (!POINTS[i].Optional) required++;
 
             for (int i = 0; i < POINTS.Length; i++)
             {
@@ -3018,20 +3041,28 @@ namespace IDM_Toolkit_Wpf
                     h.AlreadyPatched = true;
                     hits[i] = h;
                     resolved++;
+                    if (!p.Optional) requiredOk++;
                     continue;
                 }
 
                 // 情况 2：找不到原始特征码
                 if (oo < 0)
                 {
-                    logFn("  ✗ 未找到特征码: " + p.Name);
+                    if (p.Optional)
+                    {
+                        // 可选位点：本版本不含此对抗逻辑，跳过即可，不阻断整体写入
+                        if (logFn != null) logFn("  – 跳过可选位点（本版本无此逻辑）: " + p.Name);
+                        resolved++;
+                        continue;
+                    }
+                    if (logFn != null) logFn("  ✗ 未找到特征码: " + p.Name);
                     continue;
                 }
 
                 // 情况 3：特征码必须唯一
                 if (IndexOf(data, p.SigOriginal, oo + 1) >= 0)
                 {
-                    logFn("  ✗ 特征码非唯一命中: " + p.Name);
+                    if (logFn != null) logFn("  ✗ 特征码非唯一命中: " + p.Name);
                     continue;
                 }
 
@@ -3039,7 +3070,7 @@ namespace IDM_Toolkit_Wpf
                 int site = oo + p.PatchOffset;
                 if (site < 0 || site + p.Expected.Length > data.Length)
                 {
-                    logFn("  ✗ 位点越界: " + p.Name);
+                    if (logFn != null) logFn("  ✗ 位点越界: " + p.Name);
                     continue;
                 }
                 bool ok = true;
@@ -3047,7 +3078,7 @@ namespace IDM_Toolkit_Wpf
                     if (data[site + k] != p.Expected[k]) { ok = false; break; }
                 if (!ok)
                 {
-                    logFn("  ✗ 位点字节与期望不符: " + p.Name);
+                    if (logFn != null) logFn("  ✗ 位点字节与期望不符: " + p.Name);
                     continue;
                 }
 
@@ -3057,9 +3088,10 @@ namespace IDM_Toolkit_Wpf
                 h2.AlreadyPatched = false;
                 hits[i] = h2;
                 resolved++;
+                if (!p.Optional) requiredOk++;
             }
 
-            return resolved == POINTS.Length;
+            return requiredOk == required;
         }
 
         /// <summary>
@@ -3106,10 +3138,16 @@ namespace IDM_Toolkit_Wpf
                 return false;
             }
 
-            int already = 0;
-            foreach (AobHit h in hits) if (h.AlreadyPatched) already++;
-            logFn("✓ AOB 扫描全部命中 " + POINTS.Length + "/" + POINTS.Length
-                + "（已补丁 " + already + " 处 / 待补丁 " + (POINTS.Length - already) + " 处）");
+            int already = 0, skipped = 0;
+            foreach (AobHit h in hits)
+            {
+                if (h == null) { skipped++; continue; }   // 可选位点：本版本不含此逻辑
+                if (h.AlreadyPatched) already++;
+            }
+            int total = POINTS.Length - skipped;
+            logFn("✓ AOB 扫描全部命中 " + total + "/" + total
+                + "（已补丁 " + already + " 处 / 待补丁 " + (total - already) + " 处）"
+                + (skipped > 0 ? "，可选位点跳过 " + skipped + " 处（本版本无此逻辑）" : ""));
             return true;
         }
 
@@ -3141,6 +3179,7 @@ namespace IDM_Toolkit_Wpf
                 // ---- 写入代码段补丁 ----
                 foreach (AobHit h in hits)
                 {
+                    if (h == null) continue;   // 可选位点：本版本无此逻辑，直接跳过
                     AobPoint p = h.Point;
                     if (h.AlreadyPatched)
                     {
@@ -3312,7 +3351,7 @@ namespace IDM_Toolkit_Wpf
                 + "，现有 项目D.exe.BAK = v" + (bakVer.Length == 0 ? "未知" : bakVer));
 
             bool pristine = true;
-            foreach (AobHit h in hits) if (h.AlreadyPatched) { pristine = false; break; }
+            foreach (AobHit h in hits) if (h != null && h.AlreadyPatched) { pristine = false; break; }
 
             if (!pristine)
             {

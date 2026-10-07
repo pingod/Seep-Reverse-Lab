@@ -1,4 +1,4 @@
-# One-shot <项目A> UI flow: start -> activate -> click menu -> screenshots.
+﻿# One-shot <项目A> UI flow: start -> activate -> click menu -> screenshots.
 # Usage:
 #   powershell -NoProfile -ExecutionPolicy Bypass -File flow_license.ps1 -Exe lab\v2830\<项目A>.exe -Tag cracked [-Dll 1]
 param(

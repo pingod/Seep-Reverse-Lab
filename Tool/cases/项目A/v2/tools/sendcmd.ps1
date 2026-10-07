@@ -1,4 +1,4 @@
-# Send WM_COMMAND to <项目A> main window and capture resulting windows.
+﻿# Send WM_COMMAND to <项目A> main window and capture resulting windows.
 # Usage: powershell -NoProfile -ExecutionPolicy Bypass -File sendcmd.ps1 -CmdId 218 [-Exe lab\v2830\<项目A>.exe] [-Tag cmd218]
 param(
   [Parameter(Mandatory=$true)][int]$CmdId,

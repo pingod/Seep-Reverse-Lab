@@ -32,34 +32,23 @@
 | 8 | **mcp-js-reverse-playbook** | `Tool/skill/safe-skills/mcp-js-reverse-playbook/` | 同上 | 13 | 24 KB |
 | 9 | ~~ida-reverse~~（safe 版，**已废弃不安装**） | `Tool/skill/safe-skills/ida-reverse/` | 与 #3 同名冲突，`install-pi.ps1` 现保留顶层版 | 3 | 28 KB |
 
-### ⚠ apkseep 的上游归属（合规声明）
+### ⚠ 上游开源归属与完整镜像（合规声明）
 
-**`apkseep` 衍生自开源项目，已按 MIT 许可保留署名。**
+本工作台深度融合并完整归档了以下三大开源项目镜像于 `Tool/upstream/`：
 
-| 项 | 值 |
-| :--- | :--- |
-| **上游仓库** | https://github.com/newliver666/apk-reverse |
-| **许可** | MIT License — Copyright (c) 2026 apk-reverse contributors |
-| **本包位置** | `Tool/upstream/apk-reverse/`（178 文件 / 3.1 MB） |
-| **归属声明位置** | `apkseep/SKILL.md` frontmatter 内（`ATTRIBUTION` 注释块） |
+| 项目 | 上游仓库 | 许可协议 | 本包镜像位置 | 核心集成与贡献 |
+| :--- | :--- | :--- | :--- | :--- |
+| **apk-reverse** | https://github.com/newliver666/apk-reverse | MIT License | `Tool/upstream/apk-reverse/` | 移动端 G1-G4 硬性门禁、DEX 微创修补、离线测试套件与能力自检 |
+| **Open-tgtylab** | https://github.com/GeniusHu-tgty/Open-tgtylab | GPL-3.0 License | `Tool/upstream/open-tgtylab/` | 攻防实验室架构、Zero-Waste Recon 信号路由、反退缩指令与 G-Auth 协议 |
+| **open-reverselab** | https://github.com/LING71671/open-reverselab | GPL-3.0 License | `Tool/upstream/open-reverselab/` | 289+ 篇实战笔记知识库、boards 攻击网拓扑、MCP 自动化工具组件 |
 
-**上游比 apkseep 多出的部分**（apkseep 是精简衍生版）：
+**上游比衍生组件保留的完整价值**：
+- `Tool/upstream/apk-reverse/tests/`：包含 24 个离线 stdlib 单测套件与 benchmark 矩阵。
+- `Tool/upstream/open-tgtylab/`：包含全套 CTF 24h 自动化工作流与跨 agent 指令配置。
+- `Tool/upstream/open-reverselab/`：包含完整的桌面端架构、boards 拓扑与 MCP 原始实现。
 
-| 上游独有 | 本包位置 | 价值 |
-| :--- | :--- | :--- |
-| `docs/tool-verification/`（**26 文件**） | `Tool/upstream/apk-reverse/docs/tool-verification/` | ⭐ 自审证据记录：逐脚本 `TOOL-VERDICTS`、`FINDINGS`（含推翻自己的结论）、20+ `EXTENSION-*` 实测记录 |
-| `tests/`（**24 文件**） | `Tool/upstream/apk-reverse/tests/` | ⭐ stdlib 离线测试套件（unit/cli/integration），**无需设备与网络** |
-| `tests/benchmark.md` | 同上 | B1–B13 公开靶场矩阵（含负面结果） |
-| `capabilities.py` | `Tool/upstream/apk-reverse/skills/apk-reverse/scripts/` | 能力自检（G2 门依赖） |
-| `check_routing.py` 等 5 个 | `Tool/upstream/apk-reverse/` | 一致性检查（CI 跑） |
-| `skills/apk-reverse/`（114 文件） | `Tool/upstream/apk-reverse/skills/apk-reverse/` | 上游原版，可与 apkseep 对照 |
+> **为什么全量入包**：保留完整上游不仅保障开源协议合规性，更便于在断网隔离的离线靶场环境下直接对照原始测试用例与开发参考。
 
-> **为什么入包**：apkseep 的 `SKILL.md` 声称的“四大硬性质量门禁（G1-G4）”与“离线测试套件”，
-> 其**证据**在上游的 `tests/` 与 `docs/tool-verification/` 里。不入包，实习生就无法验证
-> 这些声明是否成立。
-
-> **运行测试**（可选）：`cd Tool/upstream/apk-reverse && python -m pytest -q`
-> （需先 `pip install pytest`；不连设备、不联网）
 
 ### softseep 内部构成（总控 + 按需加载的 references）
 

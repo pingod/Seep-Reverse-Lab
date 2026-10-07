@@ -24,7 +24,6 @@ authors by purchasing a genuine commercial license.
 
 PACKAGE CONTENTS:
   - README.txt                       (bilingual documentation)
-  - README.nfo                       (scene-style release info)
   - build.ps1                        (packaging + SHA256SUMS generator)
   - docs/reverse-engineering.md      (full RE walkthrough, protection layers,
                                       license architecture, CWE analysis,
@@ -126,3 +125,128 @@ BUILD
 ===============================================================================
 INT0 RESEARCH GROUP
 ===============================================================================
+
+================================================================================
+UPDATE (v2) -- CLOUD-CONTROL TRUNCATION LIMITS  &  SAFETY FIX
+================================================================================
+
+[A] HONEST ASSESSMENT OF CLOUD-CONTROL TRUNCATION
+
+    The vendor re-validates online ~15s after startup. Measured network paths:
+
+      path                                    managed-layer block effective?
+      --------------------------------------  ------------------------------
+      via WebRequest.DefaultWebProxy          YES  (IWebProxy)
+      explicit system proxy                   NO   (bypasses DefaultWebProxy)
+      self-resolved direct IP connection      NO   (bypasses proxy entirely)
+      self-built TLS stack (SslStream)        NO   (bypasses ServicePoint)
+
+    Three interception layers were implemented:
+
+      L1  IWebProxy                        -> covers DefaultWebProxy requests
+      L2  ServerCertificateValidationCallback
+          (domain + resolved-IP blacklist) -> covers HttpWebRequest/ServicePoint
+      L3  App.Days memory lock + license
+          watchdog                         -> protects in-memory and on-disk state
+
+    Measured result:
+      - direct-IP channel to the server      -> BLOCKED  (IP blacklist works)
+      - managed-stack channel                -> BLOCKED
+      - self-built socket/TLS channel        -> NOT BLOCKED (TLS callback never fired)
+      - license payload during monitoring    -> NEVER rewritten (stayed valid)
+
+    CONCLUSION: managed-layer interception can SEVERELY WEAKEN cloud control,
+    but CANNOT fully truncate it. A truly complete cut requires an OS-level
+    block (hosts entry / firewall), which no application-layer code can bypass:
+
+        127.0.0.1 <vendor-domain>
+        127.0.0.1 www.<vendor-domain>
+
+[B] SAFETY FIX -- DO NOT PERSIST CLR-LEVEL BOOTSTRAP VARIABLES
+
+    An earlier revision implemented SelfPersist(), writing
+    APPDOMAIN_MANAGER_ASM / APPDOMAIN_MANAGER_TYPE into HKCU\Environment and
+    broadcasting WM_SETTINGCHANGE. Because these are CLR-level bootstrap
+    variables, EVERY subsequently launched .NET process (PowerShell, Explorer,
+    and other .NET applications) was forced to load this DLL. Those processes
+    do not have the DLL next to them, so CLR startup failed with:
+
+        TypeLoadException in System.AppDomain.CreateAppDomainManager()
+        Starting the CLR failed with HRESULT 80131522  (COR_E_TYPELOAD)
+
+    Symptom: application windows flash and close immediately.
+    Measured impact: 82 processes affected.
+
+    REMEDIATION (applied):
+      1. SelfPersist() REMOVED -- this DLL no longer writes ANY global env var
+      2. IsTargetProcess() guard ADDED -- acts only when MainModule.FileName
+         ends with the target executable name; otherwise returns immediately
+      3. All scripts are READ-ONLY / CLEAR-ONLY with respect to global env vars
+      4. Bootstrap is now a PROCESS-LEVEL launcher (no persistence, no broadcast)
+
+    DESIGN RULE:
+      CLR-level bootstrap variables (APPDOMAIN_MANAGER_*, COR_PROFILER*,
+      COR_ENABLE_PROFILING) must NEVER be persisted. Such injection must use a
+      process-level channel only, otherwise it poisons every .NET application
+      on the machine.
+
+
+================================================================================
+更新 (v2) -- 云控截断能力边界 与 安全整改
+================================================================================
+
+[一] 云控截断能力的诚实结论
+
+    厂商在启动约 15 秒后执行在线复核。实测应用的网络路径：
+
+      路径                              托管层拦截是否有效
+      --------------------------------  ------------------
+      经 WebRequest.DefaultWebProxy     有效（IWebProxy）
+      显式使用系统代理                  无效（绕过 DefaultWebProxy）
+      自行解析域名后直连 IP             无效（完全绕过代理）
+      自建 TLS 栈（SslStream）          无效（绕过 ServicePoint）
+
+    已实现三层拦截：
+
+      L1  IWebProxy                        -> 覆盖走默认代理的请求
+      L2  证书校验回调（域名 + 解析IP黑名单）-> 覆盖 HttpWebRequest/ServicePoint
+      L3  App.Days 内存锁 + 许可看门狗      -> 保护内存态与磁盘态
+
+    实测结果：
+      - 直连服务器 IP 通道     -> 已截断（IP 黑名单生效）
+      - 托管栈通道             -> 已截断
+      - 自建 socket/TLS 通道   -> 未截断（TLS 回调从未触发）
+      - 监控期间许可载荷       -> 从未被改写（全程有效）
+
+    结论：托管层拦截能【大幅削弱】云控，但无法【完全截断】。
+    要真正彻底切断，必须使用 OS 层方案（hosts / 防火墙），
+    这是任何应用层代码都无法绕过的：
+
+        127.0.0.1 <vendor-domain>
+        127.0.0.1 www.<vendor-domain>
+
+[二] 安全整改 -- 严禁持久化 CLR 级引导变量
+
+    早期版本实现了 SelfPersist()，把 APPDOMAIN_MANAGER_ASM /
+    APPDOMAIN_MANAGER_TYPE 写入 HKCU\Environment 并广播 WM_SETTINGCHANGE。
+    由于这是 CLR 级引导变量，之后启动的【每一个 .NET 程序】
+    （PowerShell、资源管理器及其它 .NET 应用）都会被强制加载本 DLL；
+    而那些进程目录里没有该 DLL，导致 CLR 启动失败：
+
+        TypeLoadException 在 System.AppDomain.CreateAppDomainManager()
+        Starting the CLR failed with HRESULT 80131522  (COR_E_TYPELOAD)
+
+    现象：程序窗口一闪而过。实测影响 82 个进程。
+
+    整改措施：
+      1. 删除 SelfPersist() -- 本 DLL 不再写入任何全局环境变量
+      2. 新增 IsTargetProcess() 进程白名单 -- 仅当主模块文件名以目标程序名
+         结尾时才动作，否则立即返回
+      3. 所有脚本对全局环境变量只读/只清，零写入
+      4. 引导改为【进程级】启动器（不落盘、不广播）
+
+    设计铁律：
+      CLR 级引导变量（APPDOMAIN_MANAGER_*、COR_PROFILER*、
+      COR_ENABLE_PROFILING）绝不可持久化。此类注入只能走进程级通道，
+      否则会污染全机所有 .NET 程序。
+

@@ -273,7 +273,21 @@
         "双态特征码",
         "回滚点错版",
         "跨版本",
-        "特征码"
+        "特征码",
+        "静态 xref 断裂",
+        "vtable 间接调用",
+        "函数指针",
+        "运行时定位",
+        "Frida 调用栈",
+        "Thread.backtrace",
+        "ASLR 地址换算",
+        "SEH handler 噪声",
+        "加密字符串",
+        "注册表值名",
+        "对话框定位",
+        "假阳性排除",
+        "对照组实验",
+        "弹窗触发条件"
       ],
       "files": [
         "10-license-keygen/01-license-mechanism-classification.md",
@@ -283,7 +297,8 @@
         "10-license-keygen/05-keygen-frida-verification-loop.md",
         "10-license-keygen/06-cloud-license-frida-hook.md",
         "10-license-keygen/07-self-referencing-signature-convergence.md",
-        "10-license-keygen/08-cross-version-aob-migration.md"
+        "10-license-keygen/08-cross-version-aob-migration.md",
+        "10-license-keygen/09-runtime-callstack-locating.md"
       ],
       "priority": 9
     }

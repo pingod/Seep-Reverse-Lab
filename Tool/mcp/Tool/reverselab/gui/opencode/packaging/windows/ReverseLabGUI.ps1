@@ -1,4 +1,4 @@
-param(
+﻿param(
   [string]$Workspace = "",
   [int]$GuiPort = 8765,
   [int]$OpenCodePort = 4096,

@@ -1,8 +1,8 @@
-# 28.40 reproduction with the self-built DLL (real install)
+﻿# 28.40 reproduction with the self-built DLL (real install)
 # Usage: powershell -NoProfile -ExecutionPolicy Bypass -File repro_2840.ps1
 param(
-  [string]$Exe = "D:\Data\XYplorer\XYplorer.exe",
-  [string]$Dll = "C:\Users\Angus\Desktop\pi\seep\project\xyplorer\dist\version.dll",
+  [string]$Exe = "D:\Data\<项目A>\<项目A>.exe",
+  [string]$Dll = "C:\Users\Developer\Desktop\pi\seep\project\xyplorer\dist\version.dll",
   [string]$Tag = "repro2840",
   [int]$WaitSec = 18,
   [string]$LogDir = "logs"

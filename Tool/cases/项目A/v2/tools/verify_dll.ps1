@@ -1,4 +1,4 @@
-# Verify the PoC DLL: start target, read license state, read window title, optionally trigger dialog.
+﻿# Verify the PoC DLL: start target, read license state, read window title, optionally trigger dialog.
 # Usage: powershell -NoProfile -ExecutionPolicy Bypass -File verify_dll.ps1 -Exe lab\v2840\<项目A>.exe [-CmdId 218] [-Tag v2840]
 param(
   [Parameter(Mandatory=$true)][string]$Exe,

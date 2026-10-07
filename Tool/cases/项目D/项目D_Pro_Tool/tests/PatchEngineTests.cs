@@ -47,7 +47,10 @@ namespace IDM_Toolkit_Wpf
         {
             HashSet<int> expected = new HashSet<int>();
             foreach (var h in hits)
+            {
+                if (h == null) continue;   // 可选位点：本版本不含此逻辑
                 for (int i = 0; i < h.Point.Patch.Length; i++) expected.Add(h.SiteOffset + i);
+            }
             for (int i = 0; i < 8; i++) expected.Add(pe.SecurityDirOffset + i);
             for (int i = 0; i < 4; i++) expected.Add(pe.CheckSumOffset + i);
 
@@ -78,8 +81,14 @@ namespace IDM_Toolkit_Wpf
             int cnt = 0;
             bool ok = MainWindow.NativeBinaryPatcher.ApplyPatch(t, true, Nop, out cnt);
             Check("补丁执行返回 true", ok);
-            Check("生效位点数 = " + MainWindow.NativeBinaryPatcher.RulesCount,
-                  cnt == MainWindow.NativeBinaryPatcher.RulesCount);
+
+            // 本版本实际适用的位点数（可选位点在部分版本不存在，由 Optional 机制跳过）
+            MainWindow.NativeBinaryPatcher.AobHit[] pre;
+            MainWindow.NativeBinaryPatcher.ScanAll(orig, Nop, out pre);
+            int applicable = 0;
+            if (pre != null) foreach (var h in pre) if (h != null) applicable++;
+            Check("生效位点数 = " + applicable + "（全表 " + MainWindow.NativeBinaryPatcher.RulesCount + "）",
+                  cnt == applicable);
             Check("BAK 备份已创建", File.Exists(t + ".BAK"));
             Check("无残留临时文件",
                   !File.Exists(t + ".rollback.tmp") && !File.Exists(t + ".new.tmp"));
@@ -97,10 +106,10 @@ namespace IDM_Toolkit_Wpf
             MainWindow.NativeBinaryPatcher.AobHit[] hits;
             bool rescan = MainWindow.NativeBinaryPatcher.ScanAll(patched, Nop, out hits);
             Check("产物 AOB 复扫全表命中", rescan);
-            int already = 0;
-            if (hits != null) foreach (var h in hits) if (h != null && h.AlreadyPatched) already++;
-            Check("产物 " + MainWindow.NativeBinaryPatcher.RulesCount + "/" + MainWindow.NativeBinaryPatcher.RulesCount + " 位点均为已补丁态",
-                  already == MainWindow.NativeBinaryPatcher.RulesCount);
+            int already = 0, present = 0;
+            if (hits != null) foreach (var h in hits) if (h != null) { present++; if (h.AlreadyPatched) already++; }
+            Check("产物 " + present + "/" + present + " 位点均为已补丁态",
+                  present == applicable && already == applicable);
 
             List<int> diffs = DiffOffsets(orig, patched);
             string detail;
