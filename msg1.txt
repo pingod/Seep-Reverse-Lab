@@ -1,0 +1,20 @@
+refactor(cases): rename 项目N -> tessoa and publish real measured values
+
+The case was written redacted; every target-specific constant was a
+placeholder. Now that the Windows v0.28.1 and macOS arm64 runs are done for
+real, the placeholders are replaced with the actual measured values, because
+they are what makes the method reproducible.
+
+- directory renamed 项目N/ -> tessoa/ (no code name left in the path)
+- keygen.py CONFIG: baked license pubkey tessoa v0.28.1, vendor host,
+  license path, product dirname, exe name, and the v0.28.1 offsets
+  (PUBKEY_OFF 0xBF647B, SIG_HEADER_VA 0x140C07DB2, INI_HEADER_VA 0x140C06053,
+  VA_DELTA 0x140001A00), grace 1209600 s, canonical sample MD5
+- docs/reverse-engineering.md: rewritten, dual-version tables, macOS section
+- README.txt / README.nfo: v0.28.1 facts, old offsets kept as baseline
+- verify_package.py: FACTS pinned to v0.28.1, placeholder check flipped to
+  "real target values present"
+- build.ps1: real-value integrity walk (no denylist), CONFIG readiness self-test
+
+build.ps1 full self-test passes: 13/13 synthetic self-test, 3/3 integrity scans,
+artifact isolation clean, 44/44 package consistency.

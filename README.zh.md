@@ -190,7 +190,7 @@ Seep\ (251 MB)
 │   │   ├── AGENTS.md              ← 跨 Agent 通用指令规范
 │   │   └── extensions\            ← BLOCK_NONE 注入 + 口语合规转译
 │   │
-│   ├── cases\                     ← 14 大脱敏工业案例库（项目 A ~ N，含版本演进归档 v2）
+│   ├── cases\                     ← 14 大工业案例库（项目 A ~ N，含版本演进归档 v2）
 │   ├── upstream\                  ← 上游溯源验证层（3大开源项目完整镜像）
 │   │   ├── apk-reverse\           ← newliver666/apk-reverse（Android 逆向与离线测试集）
 │   │   ├── open-tgtylab\          ← GeniusHu-tgty/Open-tgtylab（攻防流水线与提效路由）
@@ -344,7 +344,7 @@ chmod +x setup/install.sh
 | **K** | .NET WPF + Themida 加固 | 内存转储脱壳 + 特权决策分支走查 + 注册表状态固化 |
 | **L** | Qt5 C++ 客户端 | 代理 DLL Hook + 11 处特权决策常数折叠 + 翻译端点本地 LLM 网关重写 |
 | **M** | Java + install4j 双层架构 | DLL 搜索顺序劫持 (version.dll IAT Hook) + JVM 原生 ClassFile 字节码插桩 (burp.Zfqu / burp.Zwxg.Zu) + 授权状态/AI Token 偏好播种 |
-| **N** | 原生 Rust x64 桌面（winit + wgpu） | Ed25519 信任锚替换（`0xB98733`）+ 离线授权证明自签 + 14 天宽限期时钟基准旁路（CWE-347 / CWE-602 / CWE-693） |
+| **N** | 原生 Rust x64 + macOS arm64（winit + wgpu） | Ed25519 信任锚替换（Windows `0xBF647B` / macOS `0x821f76`）+ 离线授权证明自签 + 14 天宽限期时钟基准旁路（CWE-347 / CWE-602 / CWE-693），双平台实弹验证 |
 
 ### 2. Android 移动安全与 DEX/SO 逆向
 - 等长字节 DEX 微创修补，自动重算 Adler-32 / SHA-1

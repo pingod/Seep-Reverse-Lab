@@ -1,0 +1,11 @@
+docs(rules): codify the audits-vs-lab split in WORKSPACE_RULES
+
+The repo had no written rule for where a finished audit's artifacts belong,
+which is how the four duplicate directories appeared. Adds:
+
+- Tool/audits/<target>/<platform>/ for tracked deliverables
+- lab/<target>/ for samples, out/, probes/, evidence/
+- Tool/cases/<case>/ for publishable PoC + methodology
+
+Also updates README.md / README.zh.md case table row N with the real
+v0.28.1 offsets and the macOS arm64 result.

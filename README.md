@@ -193,7 +193,7 @@ Seep\ (251 MB)
 │   │   ├── AGENTS.md              ← Cross-agent portable instructions
 │   │   └── extensions\            ← BLOCK_NONE injection + terminology mapping
 │   │
-│   ├── cases\                     ← 14 desensitized industrial paradigm projects (A ~ N, incl. version-evolution archive v2)
+│   ├── cases\                     ← 14 industrial paradigm projects (A ~ N, incl. version-evolution archive v2)
 │   ├── upstream\                  ← Upstream verification & attribution layer (3 Full mirrors)
 │   │   ├── apk-reverse\           ← newliver666/apk-reverse (Android RE & offline test suite)
 │   │   ├── open-tgtylab\          ← GeniusHu-tgty/Open-tgtylab (Security lab framework & workflows)
@@ -348,7 +348,7 @@ Deactivate: exit lab
 | **K** | .NET WPF + Themida Packing | Memory dump unpacking + privilege decision branching + registry state freeze |
 | **L** | Qt5 C++ Client | Proxy DLL hook + 11 privilege decision constant-folds + local LLM translation gateway |
 | **M** | Java + install4j Dual-Layer | DLL search-order hijack (version.dll IAT hook) + JVM native ClassFile bytecode patching (burp.Zfqu / burp.Zwxg.Zu) + license/AI token preference seeding |
-| **N** | Native Rust x64 desktop (winit + wgpu) | Ed25519 trust-anchor swap (`0xB98733`) + self-minted offline license proof + 14-day grace-clock basis hijack (CWE-347 / CWE-602 / CWE-693) |
+| **N** | Native Rust x64 + macOS arm64 (winit + wgpu) | Ed25519 trust-anchor swap (Windows `0xBF647B` / macOS `0x821f76`) + self-minted offline license proof + 14-day grace-clock basis hijack (CWE-347 / CWE-602 / CWE-693), verified live on both platforms |
 
 ### 2. Android & DEX/SO Analysis
 - Surgical DEX same-length patching with automated Adler-32 / SHA-1 recalculation
