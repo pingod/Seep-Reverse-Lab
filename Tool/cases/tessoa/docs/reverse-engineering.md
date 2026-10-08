@@ -1,8 +1,10 @@
-# 项目N 离线许可信任锚替换与宽限期时间基准旁路（CWE-347 / CWE-602 / CWE-693）
+# tessoa：Tessoa 离线许可信任锚替换与宽限期时间基准旁路（CWE-347 / CWE-602 / CWE-693）
 
-> 受权范围白盒审计（G-Auth）。目标为已获书面授权的 Windows 桌面应用（本文称**项目N**，
-> 版本记为 vN）。产品名、厂商域名、内置公钥字面值、设备指纹与本机标识已按仓库脱敏
-> 规范屏蔽；地址级事实与判定语义保留，供方法论复现。
+> 受权范围白盒审计（G-Auth）。目标为已获书面授权的 Windows 桌面应用 **Tessoa**
+> （`tessoa.exe`，Rust 原生 winit+wgpu x64 文件管理器；安装目录 `%APPDATA%\tessoa` 与
+> `%LOCALAPPDATA%\tessoa`）。本文按**实际值**记录目标身份（产品名、厂商 host、内置公钥字面、
+> 设备指纹），不再做脱敏。主版本记为 **v0.28.1**（本机 2026-10-07 自动更新所得，实弹验证）；
+> 2026-09-30 的旧版本作为迁移基线对照保留（见 §附录 A 的"旧版→v0.28.1"地址对照表）。
 >
 > 结论一句话：**该授权体系的密码学部分实现正确，信任锚与时间基准部分完全失效。**
 >
@@ -15,31 +17,29 @@
 ## 一、授权链路总览
 
 ```
-                 ┌──────────────── 启动 ────────────────┐
-                 │                                      │
-     license.ini │ （未签名明文缓存：55B 头 + 10 键）    │ license.sig
-                 ▼                                      │ （已签名离线证明：103B 头 + 7 字段）
-     [设备指纹比对]  ini.device_fp  vs  FNV-1a-64(MachineGuid)
-                 │                                      │
-        不匹配 → code=6                                 │
-                 │                   （此步在验签之前：  │
-                 │ 匹配                 两次 q0=6 时     │
-                 ▼                    ed25519_verify     │
-     [验签 Ed25519]  ◄──────────────────── 未被调用 ─────┘
+                  ┌──────────────── 启动 ────────────────┐
+                  │                                      │
+      license.ini │ （未签名明文缓存：55B 头 + 10 键）    │ license.sig
+                  ▼                                      │ （已签名离线证明：103B 头 + 7 字段）
+      [设备指纹比对]  ini.device_fp  vs  FNV-1a-64(MachineGuid)
+                  │                                      │
+         不匹配 → code=6                                 │
+                  │                   （此步在验签之前：  │
+                  ▼                    两次 q0=6 时     │
+      [验签 Ed25519]  ◄──────────────────── 未被调用 ─────┘
         （内置公钥常量：.rdata，64 位十六进制 ASCII）
-                 │
-        失败 → code=4        （写入点静态定位，本次未动态采到）
-                 │ 成功
-                 ▼
-     [宽限期判定] fill_result：now ≤ proof_date + 1209600 ？
-                 │                        │
-              是 → code=1               否 → code=2
-            （离线授权有效）          （宽限已过）
-                 │
-                 ▼
-     [在线复核]（每进程一次）POST /v1/accounts/<account>/licenses/actions/validate-key
-                 │
-        验签失败/不可信响应 → 记 WARN，**不降级**（fail-open）
+         失败 → code=4        （写入点静态定位，本次未动态采到）
+                  │ 成功
+                  ▼
+      [宽限期判定] fill_result：now ≤ proof_date + 1209600 ？
+                  │                        │
+               是 → code=1               否 → code=2
+             （离线授权有效）          （宽限已过）
+                  │
+                  ▼
+      [在线复核]（每进程一次）POST /v1/accounts/tessoa/licenses/actions/validate-key
+                  │
+         验签失败/不可信响应 → 记 WARN，**不降级**（fail-open）
 ```
 
 判定输出是一个状态码 + 有效期/更新策略/死线的结果结构，UI 直接消费。
@@ -63,13 +63,14 @@
 **验签点运行期命中记录**（两次独立运行，间隔约 14 分钟）：
 
 ```
-[ed25519_verify] ret=<product>.exe+0x6d0877  sig=<sig ptr>  arg1=<key buf>  arg2=0x40
-    arg1_as_hex64 = 33 38 31 30 61 31 30 66 31 63 64 37 36 39 66 64 …   ← ASCII
+[ed25519_verify] ret=tessoa.exe+0x6d0877  sig=<sig ptr>  arg1=<key buf>  arg2=0x40
+    arg1_as_hex64 = 39 38 33 33 38 66 65 33 31 65 34 39 …   ← ASCII
     -> 0xffffff01
 ```
 
-`arg2 = 0x40`（64 字节）、`arg1` 的前 32 字节 ASCII 解出来正是**我们换进去的那把公钥的十六进制串前缀**
+`arg2 = 0x40`（64 字节）、`arg1` 的前若干字节 ASCII 解出来正是**我们换进去的那把自签公钥的十六进制串前缀**（`98338fe3…`）
 ——⇒ 验签在每次启动的真实路径上被执行，且用的就是我们替换后的锚；不是死代码。
+（v0.28.1 实弹复现中，在线复核用我们换入的自签公钥去验厂商真实签名 ⇒ 必然失败，记 WARN 但不降级，反向再次证明验签真在执行、且用的是被替换后的锚。）
 
 **静态推得、本次未动态采到**：`4`（证明缺失/验签失败）与 `0/3`（在线可信）。
 `4` 的写入点定位在 `sub_1404A06F8` 尾部（`v112[0].m128i_i64[0] = 4;` 紧接
@@ -89,21 +90,24 @@
 
 内置许可公钥以**明文十六进制 ASCII 常量**存在于 `.rdata`：
 
-| 项 | 值 |
-| :--- | :--- |
-| 文件偏移 | `0xB98733` |
-| 虚拟地址 | `0x140B99733`（imagebase `0x140000000`，`.rdata` VA→file delta `0x140001000`） |
-| 长度 | 64 字节（= 32 字节 Ed25519 公钥的十六进制文本形态） |
-| 引用点 | `0x1404A2296`、`0x1404A4A3E`、`0x1406A451A`、`0x1406D0845`（**单一常量、四处引用**） |
+| 项 | v0.28.1（主） | 旧版 9/30（迁移基线） |
+| :--- | :--- | :--- |
+| 公钥字面值（跨版本**未变**） | `52dde2592618463044d4b602535494c2771dd08a5c3a2c0ca6804bb34e6f7167` | 同 |
+| 文件偏移 | `0xBF647B` | `0xB98733` |
+| 虚拟地址 | `0x140BF7E7B`（`.rdata` VA→file delta `0x140001A00`） | `0x140B99733`（delta `0x140001000`） |
+| 长度 | 64 字节（= 32 字节 Ed25519 公钥的十六进制文本形态） | 同 |
+| 全二进制唯一性 | 1 次 | 1 次 |
 
 要点：
 
 1. **等长**。替换前后都是 64 个 ASCII 字符，不改节表、不改任何偏移表、不需重定位、不破坏 PE 结构。
-   整个补丁的改动跨度就是这 64 字节（其中 60 字节实际不同）。
+   整个补丁的改动跨度就是这 64 字节（v0.28.1 实弹中 60 字节实际不同，4 字节恰好相同）。
 2. **明文**。不需要从 DER/PEM 里剥模数，静态搜索 64 位十六进制串即命中。
-3. **单点**。四处引用同一个对象 ⇒ 一次替换覆盖全部使用点，无冗余副本需同步。
-4. 同一区域另有一个同形状的公钥常量（`0x140B998DD`），用于**插件签名**路径，与许可判定无关；
-   搜索时须按引用点区分，勿误替换。
+3. **单点**。引用点见 §附录 A（单一常量、多处引用）⇒ 一次替换覆盖全部使用点，无冗余副本需同步。
+4. 同一区域另有一个同形状的公钥常量，用于**插件签名**路径，与许可判定无关；
+   搜索时须按引用点区分，勿误替换。其值与偏移：
+   - v0.28.1：`91ee607dde422ced7046908cf0ebd4ac0fba55ac0fbd85816dcab79fb81ae0` @ file `0xBF6625`（VA `0x140BF8E25`），与许可 key 间距 `0x1AA`。
+   - 旧版 9/30：@ `0xB988DD`（VA `0x140B998DD`），间距同样 `0x1AA`。
 
 ### 2.3 替换后即可自签
 
@@ -111,10 +115,10 @@
 证明格式（`license.sig`）：
 
 ```
-# <product> license proof …            ← 103 字节模板，取自 .rdata @0x140BA72DF
+# tessoa license proof —— 服务端签过的原始响应，勿手改（改一个字节即失效）   ← 103 字节模板，v0.28.1 取自 .rdata @0x140C07DB2
 schema = 1
-host = <vendor-host>
-path = /v1/accounts/<vendor-account>/licenses/actions/validate-key
+host = api.keygen.sh
+path = /v1/accounts/tessoa/licenses/actions/validate-key
 date = <RFC1123 GMT>
 digest = sha-256=<b64(sha256(body))>
 signature = algorithm="ed25519",signature="<b64>",headers="host date digest"
@@ -124,12 +128,14 @@ body_b64 = <b64(JSON)>
 签名基串严格按 `headers` 顺序拼接：
 
 ```
-host: <vendor-host>\n
+host: api.keygen.sh\n
 date: <RFC1123 GMT>\n
 digest: sha-256=<b64>
 ```
 
 即"HTTP 消息头签名"（RFC 9421 风格）的离线落盘版。
+`body` 为 JSON：`meta.code=VALID`、`meta.scope.fingerprint`（绑定时）、`data.id`、
+`data.attributes.expiry / key / metadata{licensee, edition, updates}`。
 
 ---
 
@@ -188,7 +194,9 @@ unsigned __int64 __fastcall sub_1406F02C0(__int64 a1, __int64 a2, __int64 a3)
 }
 ```
 
-`0x127500`（=1209600）在**整个二进制里只出现一次**（`0x1406F030B`，`.text`），
+宽限常量 `1209600`（= 14 天）在**整个二进制里只出现一次**：
+- 旧版 9/30：LE64 @ `0x6EF030B`（VA `0x1406F030B`，`.text`），十六进制 `0x127500`。
+- v0.28.1：编码变为 **LE32 @ `0x73F657`**（VA `0x140740257`），仍全二进制唯一。
 这既是定位锚，也说明不存在第二个宽限路径。
 
 `maybe_time` @ `0x1406F0349`：
@@ -217,10 +225,11 @@ result = (v2 - 116444736000000000LL) / 0x989680uLL;   // FILETIME -> epoch 秒
 
 | 项 | 内容 |
 | :--- | :--- |
-| 推导 | `sub_1404A2108`：`FNV-1a-64( MachineGuid 字符串 )`，取小写十六进制，16 字符 |
-| 来源 | `HKLM\SOFTWARE\Microsoft\Cryptography\MachineGuid` |
+| 推导 | `sub_1404A2108`：`FNV-1a-64( MachineGuid 字符串 )`，取小写十六进制，16 字符，**无 `0x` 前缀** |
+| 来源 | `HKLM\SOFTWARE\Microsoft\Cryptography\MachineGuid`（字符串**原样**，不做大写/去横线归一） |
 | 比较 | `sub_140008885`，**逐字节严格相等** |
 | 失败 | `code=6`，且发生在**验签之前** |
+| 本机实测 | MachineGuid `0fcacb02-51c4-44db-a386-9881ce297971` ⇒ 指纹 `70bbb76527f36f1c`（与 9/30 与 v0.28.1 两次运行一致） |
 
 三点要害：
 
@@ -228,8 +237,7 @@ result = (v2 - 116444736000000000LL) / 0x989680uLL;   // FILETIME -> epoch 秒
 2. **明文存储**。指纹同时写进未签名的 `license.ini`（`device_fp`），比对双方都在攻击者手里。
 3. **格式即门控**。带 `0x` 前缀、大写、长度不符都会失败——实测一次因为前缀直接 `device_mismatch`。
 
-（本案例归档不包含真实 MachineGuid 与真实指纹；`src/keygen.py` 在运行时从本机注册表实时派生，
-不硬编码任何具体值。）
+`src/keygen.py` 在运行时从本机注册表实时派生指纹（`device_fp()`），不硬编码任何具体值。
 
 ---
 
@@ -260,11 +268,20 @@ result = (v2 - 116444736000000000LL) / 0x989680uLL;   // FILETIME -> epoch 秒
 | 任务体 | `0x1404A06F8` |
 | 引擎 | `0x1404A21C8`（5125 字节大函数） |
 | 触发 | 每进程一次，`byte_140D43DBB` 做已执行门闩 |
-| 端点 | `POST /v1/accounts/<vendor-account>/licenses/actions/validate-key` |
+| 端点 | `POST /v1/accounts/tessoa/licenses/actions/validate-key` |
+| 厂商 host | `api.keygen.sh`（离线证明 host 头）；在线复核双路由 `api.tessoa.com`（Cloudflare）/ `api.tessoa.cn`（Tencent EdgeOne），均指向同一首尔服务器 |
 
-实测：服务端不可达、或服务端返回**验签失败**的响应时，客户端只记录一条
-`[WARN] … untrusted reply (signature verification failed …)`，
-**本地授权状态不变**。断网、MITM、服务端吊销均不撤回已获得的状态。
+实测（v0.28.1 实弹复现）：厂商真实服务器返回了**它自己签的**响应，客户端用**我们换进去的自签公钥**去验 ⇒ 必然失败：
+
+```
+[WARN] license: POST /v1/accounts/tessoa/licenses/actions/validate-key
+       via api.tessoa.cn : untrusted reply (signature verification failed (HTTP 200, signed))
+[WARN] license: POST /v1/accounts/tessoa/licenses/actions/validate-key
+       via api.tessoa.com: untrusted reply (signature verification failed (HTTP 200, signed))
+```
+
+只记一条 `[WARN] … untrusted reply (signature verification failed …)`，**本地授权状态不变**。
+断网、MITM、服务端吊销均不撤回已获得的状态。
 
 这使 F-01 + F-02 的效果变成**不可撤回**：一旦写入，服务端没有正常手段收回。
 
@@ -285,7 +302,7 @@ result = (v2 - 116444736000000000LL) / 0x989680uLL;   // FILETIME -> epoch 秒
 ### 攻击链（五步，全部本地，无需服务端配合）
 
 1. 取得目标 exe 的写权限（用户目录下的安装位置即可写）；
-2. 在偏移 `0xB98733` 等长替换 64 字节公钥为自己持有的 Ed25519 公钥；
+2. 在偏移 `0xBF647B`（v0.28.1；旧版 `0xB98733`）等长替换 64 字节公钥为自己持有的 Ed25519 公钥；
 3. 按 §2.3 的签名基串格式自签 `license.sig`，`date` 头前推；
 4. 写 `license.ini`：`device_fp` 用本机 MachineGuid 现场复算，`updates = lifetime`；
 5. 断网启动 ⇒ `code=1`，UI 完整解锁，宽限期显示为剩余约十年。
@@ -318,6 +335,7 @@ result = (v2 - 116444736000000000LL) / 0x989680uLL;   // FILETIME -> epoch 秒
 | M-4 | 证据管道禁止 `head` | `… \| head -40` 触发 SIGPIPE，被采进程可能中途退出，产生假阴性 |
 | M-5 | 每个引用地址都要回到证据核对 | 附录地址表若含未核对值，必须删除而非保留。"看起来合理"的地址比没有地址更有害 |
 | M-6 | 双向对照 | 正向命中 + 反向（回拨 ⇒ `code=2`）共同构成因果，单正向不足 |
+| M-7 | 跨版本迁移先看"值不变、地址漂" | v0.28.1 公钥**值**与 9/30 完全相同，仅 5 个地址常量 + `VA_DELTA` 漂移；先核对公钥值是否变，再重定位偏移，避免误判成"整套方法失效" |
 
 ---
 
@@ -351,16 +369,18 @@ result = (v2 - 116444736000000000LL) / 0x989680uLL;   // FILETIME -> epoch 秒
 ## 附录 A：地址级事实（供厂商定位）
 
 以下为**镜像内虚拟地址**（imagebase `0x140000000`），与运行时基址无关。
-每一行都有对应的静态/动态证据支撑；脱敏项以 `<…>` 标注。
+每一行都有对应的静态/动态证据支撑。
+
+**v0.28.1 主版本（2026-10-07 自动更新，实弹验证）：**
 
 | 项 | 地址 | 说明 |
 | :--- | :--- | :--- |
-| 内置许可公钥 | VA `0x140B99733` / 文件偏移 `0xB98733` | 64 字节十六进制 ASCII；字面值脱敏 |
-| 其引用点 | `0x1404A2296`、`0x1404A4A3E`、`0x1406A451A`、`0x1406D0845` | 单一常量、四处引用 |
-| 插件签名公钥 | VA `0x140B998DD`（引用 `0x1404D8458`） | 同形状但不同路径，**勿误替换** |
-| 证明文件头模板 | VA `0x140BA72DF`，103 字节 | 以 `# ` 开头、`\n` 结尾 |
-| ini 文件头模板 | VA `0x140BA5418`，55 字节 | 同上 |
-| 宽限期判定 | `sub_1406F02C0`（+14d 算术在 `0x1406F030B`） | `0x127500` 全二进制唯一出现处 |
+| 内置许可公钥 | 文件偏移 `0xBF647B` / VA `0x140BF7E7B` | 64 字节十六进制 ASCII，全二进制 1 次 |
+| 插件签名公钥 | 文件偏移 `0xBF6625` / VA `0x140BF8E25` | `91ee607d…`，与许可 key 间距 `0x1AA`，**勿误替换** |
+| 证明文件头模板 | VA `0x140C07DB2`（file `0xC063B2`），103 字节 | 以 `# ` 开头、`\n` 结尾 |
+| ini 文件头模板 | VA `0x140C06053`（file `0xC04653`），55 字节 | 同上 |
+| 宽限期常量 1209600 | LE32 @ `0x73F657`（VA `0x140740257`） | 全二进制唯一；编码由旧版 LE64 变 LE32 |
+| 宽限期判定 | `sub_1406F02C0`（+14d 算术） | `fill_result` |
 | 本地时间源 | `sub_1406F0349` | FILETIME → epoch 秒，无单调时钟 |
 | 指纹推导 | `sub_1404A2108` | FNV-1a-64(MachineGuid) |
 | 指纹比较 | `sub_140008885` | 逐字节严格相等 |
@@ -369,8 +389,31 @@ result = (v2 - 116444736000000000LL) / 0x989680uLL;   // FILETIME -> epoch 秒
 | 在线复核引擎 | `0x1404A21C8` | 5125 字节；验签失败仅记 WARN |
 | 已执行门闩 | `byte_140D43DBB` | 复核去重标志 |
 
-**节区 VA→文件偏移差**（独立解析节表核对）：`.text` `0x140000C00`、`.rdata` `0x140001000`、
+**旧版 → v0.28.1 迁移对照（公钥值跨版本未变，仅地址漂移）：**
+
+| 项 | 旧版 9/30 | v0.28.1 |
+| :--- | :--- | :--- |
+| 内置许可公钥（值） | `52dde259…7167` @ file `0xB98733`（VA `0x140B99733`） | **同值** @ file `0xBF647B`（VA `0x140BF7E7B`） |
+| 插件公钥 | @ `0xB988DD` | @ `0xBF6625`（间距 `0x1AA` 保持） |
+| `.rdata` VA→file delta | `0x1000` | `0x1A00` |
+| `VA_DELTA`（imagebase+delta） | `0x140001000` | `0x140001A00` |
+| 签名证明头模板（103B） | VA `0x140BA72DF`（file `0xBA62DF`） | VA `0x140C07DB2`（file `0xC063B2`） |
+| 许可存储头模板（55B） | VA `0x140BA5418`（file `0xBA4418`） | VA `0x140C06053`（file `0xC04653`） |
+| 宽限常量 1209600 | LE64 @ `0x6EF030B`（VA `0x1406F030B`，`0x127500`） | LE32 @ `0x73F657`（VA `0x140740257`） |
+| 设备指纹算法 | FNV-1a-64(MachineGuid) | 同（本机 `70bbb76527f36f1c` 两版一致） |
+| 厂商 host / 路径 | `api.keygen.sh` / `/v1/accounts/tessoa/licenses/actions/validate-key` | 同 |
+
+**样本指纹（版本守卫）：**
+
+| 版本 | 大小 | MD5 |
+| :--- | ---: | :--- |
+| 旧版 9/30（`tessoa.exe.orig-backup`） | 14,370,200 B | `b5c4e1c5…` |
+| **v0.28.1（pristine）** | 14,817,688 B | `9b5996c2f9119fd3e7946ebd886dd6ce` |
+| v0.28.1（patched 实弹产物） | 14,817,688 B | `aa8c13880b233625c315d473480a952f` |
+
+**节区 VA→文件偏移差**（旧版 9/30 独立解析节表核对）：`.text` `0x140000C00`、`.rdata` `0x140001000`、
 `.data` `0x140001200`、`.pdata`/`.rsrc` `0x140003A00`、`.reloc` `0x140004400`。
+（v0.28.1 因节重排 `.rdata` delta 变为 `0x1A00`。）
 
 **状态码语义**（区分证据强度；imagebase `0x140000000`）：
 
@@ -388,29 +431,29 @@ result = (v2 - 116444736000000000LL) / 0x989680uLL;   // FILETIME -> epoch 秒
 
 | 文件 | 用途 |
 | :--- | :--- |
-| `src/keygen.py` | 信任锚替换 + 离线证明自签 + 宽限期日期控制（脱敏版，需自行填写占位项） |
+| `src/keygen.py` | 信任锚替换 + 离线证明自签 + 宽限期日期控制（**Tessoa v0.28.1 实测版**，CONFIG 已填真实值，可直接运行） |
 | `src/selftest.py` | **合成样本自检**：不需要真实目标即可跑通全链路，核对"等长替换 / 差异只落在公钥槽 / 头部模板保留 / 指纹不带 `0x` / 签名可离线复验 / 日期前推 3650 天"共 13 项 |
 | `src/restore.ps1` | 撤销：还原原始 exe、删除下发的许可文件与备份 |
-| `build.ps1` | 打包自检：语法检查 + 占位保护 + 合成自检 + 脱敏走查 + 产物隔离 + `SHA256SUMS.txt` |
+| `build.ps1` | 打包自检：语法检查 + 配置就绪自检 + 合成自检 + 完整性走查 + 产物隔离 + `SHA256SUMS.txt` |
 
-`keygen.py` 的占位项以 `<…>` 标注，未填写时脚本**显式报错退出**（`--check-config` 可随时查看待填项），
+`keygen.py` 的 CONFIG 项若因换样本而失效，脚本会**显式报错退出**（`--check-config` 可随时查看就绪状态），
 不会静默用假值去打错误的偏移。
 
 ---
 
-## 附录 C：脱敏说明
+## 附录 C：实弹验证记录（v0.28.1，本机自有副本）
 
-| 原始值 | 归档呈现 |
+| 阶段 | 结果 |
 | :--- | :--- |
-| 产品名 / 可执行文件名 | `项目N` / `<product>` |
-| 厂商 API 域名与账户 | `<vendor-host>` / `<vendor-account>` |
-| 内置许可公钥字面值 | `<REDACTED_BAKED_PUBKEY>`（64 位十六进制） |
-| 样本哈希 | `<sample-md5>`（MD5 仅用于版本自校验，不含信息量） |
-| 授权码字串 | 运行时随机生成（`make_license_key()`） |
-| MachineGuid / 设备指纹 | **不记录**；运行时从本机注册表实时派生 |
-| 自签私钥 | **不包含**；`out/mint_keys.json` 为运行期生成物，不入库 |
-| 本机用户目录 | `C:\Users\<you>\…` |
-| 目标二进制 / 证据目录 / 完整交付报告 | **不发布**（仅保留在本地私有目录） |
+| `--check-config` | 全部就绪 |
+| `--mint` 生成 patched.exe | ✓ 信任锚 64B 等长替换 → 新自签公钥 `98338fe31e49116752409f0a573e581a38f616b6752f69a9e0139bc230664bc8`；diff=60B 严格落 `0xBF647B` 槽；原公钥移除、插件公钥完好 |
+| `--verify` 签名/摘要独立复验 | signature OK / digest OK |
+| `--deploy` | 备份 license.ini/sig → `*.bak-20261008-013531`，下发新产物 |
+| `--install-exe` | 原位打补丁已装 exe，校验新公钥 @ `0xBF647B`；已装 MD5 → `aa8c1388…` |
+| 动态启动 | 进程正常（窗口 `Games — tessoa`，无锁屏/激活弹窗）；`license.ini`/`license.sig` 内容+mtime 保持部署态**未被应用改写**（指纹匹配 + 验签通过） |
+| 在线复核 fail-open 复现 | `api.tessoa.com`/`api.tessoa.cn` 真实签名响应被自签公钥验签失败 ⇒ 记 WARN，**不降级本地授权态** |
+
+自签 Ed25519 密钥对为运行期生成物（`out/mint_keys.json`，`--newkey` 可轮换），不在本文档硬编码。
 
 ---
 

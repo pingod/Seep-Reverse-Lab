@@ -1,24 +1,24 @@
-﻿# restore.ps1 -- 项目N case: undo the trust-anchor swap and remove minted license files
+﻿#restore.ps1 -- tessoa case: undo the trust-anchor swap and remove minted license files
 #
 # Usage:
-#   powershell -ExecutionPolicy Bypass -File .\restore.ps1 -Product myapp
-#   powershell -ExecutionPolicy Bypass -File .\restore.ps1 -Product myapp -ExeOnly
-#   powershell -ExecutionPolicy Bypass -File .\restore.ps1 -Product myapp -LicenseOnly
+#   powershell -ExecutionPolicy Bypass -File .\restore.ps1
+#   powershell -ExecutionPolicy Bypass -File .\restore.ps1 -ExeOnly
+#   powershell -ExecutionPolicy Bypass -File .\restore.ps1 -LicenseOnly
 #
 # What it does, in order:
 #   [1/4] stop the target process (it is single-instance; a live process locks the exe)
-#   [2/4] restore the installed exe from <exe>.orig-backup (written by keygen.py --install-exe)
-#   [3/4] delete %APPDATA%\<product>\license.ini / license.sig, keeping any .bak-* as .restored-*
+#   [2/4] restore the installed exe from tessoa.exe.orig-backup (written by keygen.py --install-exe)
+#   [3/4] delete %APPDATA%\tessoa\license.ini / license.sig, keeping any .bak-* as .restored-*
 #   [4/4] report the resulting state
 #
 # Nothing here is destructive to the original binary: the backup is only removed after a
 # successful restore, and the file is copied (not moved) into place.
-# Requires -Product to be filled in; the shipped placeholder is rejected on purpose so this
-# script can never touch an unintended directory.
+# -Product / -ExeName default to the real target. The placeholder guard still rejects
+# any value containing '<' or '>' so the script can never touch an unintended directory.
 
 param(
-    [string]$Product = '<product>',
-    [string]$ExeName = '<product>.exe',
+    [string]$Product = 'tessoa',
+    [string]$ExeName = 'tessoa.exe',
     [switch]$ExeOnly,
     [switch]$LicenseOnly
 )
@@ -27,8 +27,7 @@ $ErrorActionPreference = 'Stop'
 $OutputEncoding = [System.Text.Encoding]::UTF8
 
 if ($Product -match '<' -or $Product -match '>') {
-    Write-Host 'FATAL: -Product is still the redacted placeholder. Pass -Product <real-dir-name>.' -ForegroundColor Red
-    Write-Host '       See README.txt ("NOTE ON REDACTION") for the list of values to fill in.'
+    Write-Host 'FATAL: -Product still looks like a placeholder. Pass a real directory name.' -ForegroundColor Red
     exit 3
 }
 
@@ -39,7 +38,7 @@ $exeBackup    = "$liveExe.orig-backup"
 $processName  = [IO.Path]::GetFileNameWithoutExtension($ExeName)
 
 Write-Host '=============================================================='
-Write-Host "  项目N restore -- product directory: $Product"
+Write-Host "  tessoa restore -- product directory: $Product"
 Write-Host '=============================================================='
 
 # ---- [1/4] stop the process ------------------------------------------------

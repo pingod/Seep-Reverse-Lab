@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""keygen.py — 项目N 客户端授权旁路 PoC（信任锚替换 + 离线证明自签）.
+"""keygen.py — tessoa 客户端授权旁路 PoC（信任锚替换 + 离线证明自签）.
 
-本脚本是**脱敏版**研究样本。要直接运行，需自备目标样本并填写下方 CONFIG 中
-以尖括号标注的占位值（脱敏规范见 README.txt 的"脱敏说明"）。
+目标为 Tessoa v0.28.1（Windows 桌面文件管理器，Rust 原生 winit+wgpu，x64）。
+CONFIG 中的公钥/host/路径/样本 MD5 均为本机实测真实值，可直接运行。
 
 流程（全部规格来自静态分析 + 运行期插桩，见 docs/reverse-engineering.md）：
   1. 生成/复用 Ed25519 密钥对（out/mint_keys.json，除非 --newkey）
@@ -17,10 +17,10 @@
        而非 ini 字段 —— 因此 --sig-date-offset-days 决定离线存活时长。
 
 用法：
-  python keygen.py --check-config          # 检查占位值是否已填写
-  python keygen.py --mint                  # 生成 out/<product>.patched.exe + 两份产物
+  python keygen.py --check-config          # 检查配置项是否就绪
+  python keygen.py --mint                  # 生成 out/tessoa.patched.exe + 两份产物
   python keygen.py --mint --no-fp          # 不写设备指纹（门控安全路径）
-  python keygen.py --deploy                # 下发产物到 %APPDATA%\\<product>（自动备份）
+  python keygen.py --deploy                # 下发产物到 %APPDATA%\\tessoa（自动备份）
   python keygen.py --install-exe           # 备份已安装 exe 并原位打补丁
   python keygen.py --verify                # 本地自校验已签发的证明
 
@@ -39,24 +39,24 @@ import uuid as uuidlib
 from email.utils import formatdate
 
 # ============================================================================
-# CONFIG —— 尖括号值需自行替换（脱敏项）
+# CONFIG —— 本机实测真实值（针对 Tessoa v0.28.1；换样本时更新对应项）
 # ============================================================================
-BAKED_PUBKEY_HEX = "<REDACTED_BAKED_PUBKEY>"   # 目标内置许可公钥：64 位小写十六进制 ASCII
-VENDOR_HOST = "<vendor-host>"                  # 证明中的 host 头（参与签名基串）
-LICENSE_PATH = "/v1/accounts/<vendor-account>/licenses/actions/validate-key"
-PRODUCT_DIRNAME = "<product>"                  # %APPDATA%\<product> / %LOCALAPPDATA%\<product>
-EXE_NAME = "<product>.exe"                     # 已安装可执行文件名
+BAKED_PUBKEY_HEX = "52dde2592618463044d4b602535494c2771dd08a5c3a2c0ca6804bb34e6f7167"  # v0.28.1 实测（@0xBF647B 唯一；与旧版公钥值相同）
+VENDOR_HOST = "api.keygen.sh"                  # 证明中的 host 头（来自 9/30 真实 sig）
+LICENSE_PATH = "/v1/accounts/tessoa/licenses/actions/validate-key"
+PRODUCT_DIRNAME = "tessoa"                     # %APPDATA%\tessoa / %LOCALAPPDATA%\tessoa
+EXE_NAME = "tessoa.exe"                        # 已安装可执行文件名
 LICENSEE = "Seep Reverse Lab"
 EDITION = "standard"
 QUOTA = 5
 
-# ---- 地址级事实（与目标版本绑定，来自静态分析，无需替换） ------------------
-PUBKEY_OFF = 0xB98733            # 文件偏移（VA 0x140B99733 - imagebase - 0x1000）
+# ---- 地址级事实（v0.28.1 实测，10/8 探针 probe2/4/5） --------------------
+PUBKEY_OFF = 0xBF647B            # v0.28.1 文件偏移（VA 0x140BF7E7B；旧版 0xB98733）
 PUBKEY_LEN = 64
-SIG_HEADER_VA = 0x140BA72DF      # 证明文件头模板，103 字节
-INI_HEADER_VA = 0x140BA5418      # ini 文件头模板，55 字节
-VA_DELTA = 0x140000000 + 0x1000
-GRACE_SECONDS = 1209600          # 14 天；全二进制仅出现一次（0x1406F030B）
+SIG_HEADER_VA = 0x140C07DB2      # 证明文件头模板，103 字节（file 0xC063B2）
+INI_HEADER_VA = 0x140C06053      # ini 文件头模板，55 字节（file 0xC04653）
+VA_DELTA = 0x140000000 + 0x1A00  # v0.28.1 .rdata VA->file delta（旧版 0x1000）
+GRACE_SECONDS = 1209600          # 14 天；LE32 @0x73F657（VA 0x140740257）全二进制唯一
 
 # ---- 判定语义（实测确认） --------------------------------------------------
 # 设备指纹 = FNV-1a-64(MachineGuid 字符串) 的小写十六进制，16 字符，**无 "0x" 前缀**。
@@ -67,7 +67,7 @@ GRACE_SECONDS = 1209600          # 14 天；全二进制仅出现一次（0x1406
 UPDATES_DEFAULT = "lifetime"
 EXPIRY_DAYS = 335                # 建议落在 (now, now+400d)
 SIG_DATE_OFFSET_DEFAULT = 3650   # 日期头前推天数：宽限死线 = date + 14d，无 skew 校验
-CANON_MD5 = "<sample-md5>"       # 样本指纹校验，防对错版本下手
+CANON_MD5 = "9b5996c2f9119fd3e7946ebd886dd6ce"  # v0.28.1 pristine（与已装 exe 同一 MD5）
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 CASE = os.path.dirname(HERE)
@@ -90,7 +90,7 @@ def log(*a):
 
 
 def unfilled():
-    """返回仍为占位状态的配置项。"""
+    """返回仍未就绪（占位或长度不符）的配置项。"""
     bad = []
     if PLACEHOLDER_RE.search(BAKED_PUBKEY_HEX) or len(BAKED_PUBKEY_HEX) != PUBKEY_LEN:
         bad.append("BAKED_PUBKEY_HEX")
@@ -108,8 +108,8 @@ def unfilled():
 def require_config(strict=True):
     bad = unfilled()
     if bad and strict:
-        log("FATAL: 以下脱敏占位值尚未填写：%s" % ", ".join(bad))
-        log("       参见 README.txt 的『脱敏说明』与 docs/reverse-engineering.md 的地址级事实。")
+        log("FATAL: 以下配置项尚未就绪（占位或长度不符）：%s" % ", ".join(bad))
+        log("       参见 README.txt 与 docs/reverse-engineering.md 的地址级事实。")
         sys.exit(3)
     return bad
 
@@ -358,7 +358,7 @@ def verify():
 
 
 def main():
-    ap = argparse.ArgumentParser(description="项目N 授权旁路 PoC（脱敏版）")
+    ap = argparse.ArgumentParser(description="tessoa 授权旁路 PoC（Tessoa v0.28.1 实测版）")
     ap.add_argument("--mint", action="store_true")
     ap.add_argument("--newkey", action="store_true", help="轮换自签密钥对")
     ap.add_argument("--no-fp", action="store_true", help="不写设备指纹/指纹声明")
@@ -383,7 +383,7 @@ def main():
     if a.check_config:
         bad = unfilled()
         if bad:
-            log("[config] 待填写的脱敏占位项：%s" % ", ".join(bad))
+            log("[config] 待就绪的配置项：%s" % ", ".join(bad))
         else:
             log("[config] 全部就绪")
         return 0 if not bad else 1

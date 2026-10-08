@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""项目N package verifier - no target binary needed.
+"""tessoa package verifier - no target binary needed.
 
 Checks the shipped package against itself: the file manifest, the
 checksums, and the exact facts the three documentation layers quote.
@@ -25,15 +25,15 @@ REQUIRED = [
 
 # (source, offset-in-hex, literal) facts quoted across the docs
 FACTS = [
-    ("PUBKEY_OFF", "0xB98733"),
-    ("SIG_HEADER_VA", "0x140BA72DF"),
-    ("INI_HEADER_VA", "0x140BA5418"),
+    ("PUBKEY_OFF", "0xBF647B"),
+    ("SIG_HEADER_VA", "0x140C07DB2"),
+    ("INI_HEADER_VA", "0x140C06053"),
     ("GRACE_SECONDS", "1209600"),
 ]
 ADDRS = [
-    "0x140B99733", "0x1404A2296", "0x1404A4A3E", "0x1406A451A", "0x1406D0845",
-    "0x1406F02C0", "0x1406F030B", "0x127500", "0x140008885", "0x1404A06F8",
-    "0x1404A21C8", "0x140D43DBB", "0x140B998DD",
+    "0x140BF7E7B", "0x140BF8E25", "0x140C07DB2", "0x140C06053",
+    "0x140740257", "0x1406F02C0", "0x1406F030B", "0x127500",
+    "0x1404A06F8", "0x1404A21C8", "0x140D43DBB", "0x140008885",
 ]
 
 
@@ -170,8 +170,10 @@ def main():
     r.eq("selftest.py check count", n_chk, 13)
     r.chk("README quotes the real self-test count",
           ("%d assertions" % n_chk) in txt and ("%d checks" % n_chk) in txt)
-    r.chk("redaction placeholders used, no literal secrets",
-          "<REDACTED_" in kg and not re.search(r"seed=0x[0-9a-f]{16}", kg))
+    r.chk("real target values present, no redaction placeholders",
+          "52dde2592618463044d4b602535494c2771dd08a5c3a2c0ca6804bb34e6f7167" in kg
+          and "api.keygen.sh" in kg and "<REDACTED_" not in kg
+          and not re.search(r"seed=0x[0-9a-f]{16}", kg))
     # Target identity is checked against the caller-supplied denylist only:
     # the patterns themselves must never appear inside a shipped file.
     dl = denylist_from_argv()
@@ -193,9 +195,9 @@ def main():
     k = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(k)
     r.eq("grace constant", k.GRACE_SECONDS, 14 * 86400)
-    r.eq("anchor offset", hex(k.PUBKEY_OFF), "0xb98733")
+    r.eq("anchor offset", hex(k.PUBKEY_OFF), "0xbf647b")
     r.eq("anchor slot length", k.PUBKEY_LEN, 64)
-    r.eq("VA->file delta", k.VA_DELTA, 0x140000000 + 0x1000)
+    r.eq("VA->file delta", k.VA_DELTA, 0x140000000 + 0x1A00)
     try:
         from nacl.signing import VerifyKey
         r.chk("nacl importable (needed by selftest)", True)

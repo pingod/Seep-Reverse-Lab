@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""selftest.py — 项目N 随包自检：用合成样本验证 keygen.py 的逻辑正确性。
+"""selftest.py — tessoa 随包自检：用合成样本验证 keygen.py 的逻辑正确性。
 
-不需要真实目标即可运行，用于回答"脱敏后的脚本还跑得通吗"：
+不需要真实目标即可运行，用于回答"随包脚本还跑得通吗"：
 
   python src/selftest.py
 
@@ -45,7 +45,7 @@ def chk(name, ok):
 
 def main():
     assert len(SIG_HDR) == 103 and len(INI_HDR) == 55, "fixture header sizes"
-    work = tempfile.mkdtemp(prefix="projectL-selftest-")
+    work = tempfile.mkdtemp(prefix="tessoa-selftest-")
     samples = os.path.join(work, "samples")
     out = os.path.join(work, "out")
     os.makedirs(samples)
@@ -76,7 +76,7 @@ def main():
     k.CANON_MD5 = hashlib.md5(bytes(buf)).hexdigest()
 
     print("  placeholder guard: unfilled() -> %s (expected empty)" % k.unfilled())
-    chk("all redacted placeholders accepted once filled", not k.unfilled())
+    chk("placeholder guard passes once CONFIG is filled with real values", not k.unfilled())
 
     pub = k.mint(FP, "lifetime", 335, 0, None, 3650)
 
@@ -131,7 +131,7 @@ def main():
         for n in bad:
             print("    FAIL: %s" % n)
         return 1
-    print("  项目N 随包自检通过")
+    print("  tessoa 随包自检通过")
     return 0
 
 

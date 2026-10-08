@@ -14,8 +14,10 @@ __________________________________________________________________________
    RELEASE INFORMATION
  - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-        Release .......: 项目N.vN.TrustAnchorSwap-INT0
-        Target ........: 项目N vN  (Windows 桌面文件管理器)
+        Release .......: tessoa.v0.28.1.TrustAnchorSwap-INT0
+        Target ........: tessoa v0.28.1  (Windows 桌面文件管理器, x64 PE32+)
+         Cross-ref .....: macOS arm64 实弹补丁见 Tool/audits/tessoa/macos/（Mach-O 0x821f76 等长替换 + ad-hoc 重签,
+                          同公钥同密钥对, 激活成功）
         Runtime .......: Rust native GUI (winit event loop + wgpu renderer)
                          PE32+ x64 / single-instance / NO WebView, NOT Tauri
         Protection ....: Ed25519-signed offline license proof
@@ -42,7 +44,9 @@ __________________________________________________________________________
 
           [1] TRUST ANCHOR
               The baked-in license public key is a 64-byte plaintext hex
-              ASCII constant in .rdata (file offset 0xB98733). One object,
+              ASCII constant in .rdata (v0.28.1: file offset 0xBF647B, VA 0x140BF7E7B;
+               9/30 baseline: 0xB98733/0x140B99733; value unchanged across
+               versions). One object,
               four xrefs, exactly the same length as any Ed25519 key we
               generate. Swap it in place:
                  .reloc  -> untouched      section table -> untouched
@@ -59,9 +63,9 @@ __________________________________________________________________________
 
           [3] TIME BASE
               Offline grace deadline = signed `date` header + 1209600 (14d),
-              computed in fill_result (sub_1406F02C0; arithmetic at
-              0x1406F030B -- the constant 0x127500 appears EXACTLY ONCE in
-              the entire binary).
+              computed in fill_result (sub_1406F02C0; arithmetic at 0x140740257,
+              LE32 at file 0x73F657; v0.28.1; 9/30 baseline: LE64 at 0x1406F030B)
+              -- the constant 0x127500 appears EXACTLY ONCE in the entire binary.
               No skew check. The date is covered only by OUR signature.
                  +3650 d -> UI reports ~3663 d of offline grace remaining
                  -30 d   -> code=2 (grace passed)   [negative control]
@@ -122,29 +126,35 @@ __________________________________________________________________________
         * Never pipe evidence through `head` -- SIGPIPE can kill the sampled
           process mid-run and hand you a false negative.
         * A second, same-shaped pubkey constant exists in the plugin
-          signature path (VA 0x140B998DD). Same look, different job.
+          signature path (v0.28.1 VA 0x140BF8E25; 9/30 baseline VA 0x140B998DD).
+           Same look, different job.
           Disambiguate by xref, not by shape.
         * Every address quoted in a report must trace back to evidence.
           Delete unverified ones; a plausible-but-wrong address is worse than
           no address at all.
 
  - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-   REDACTION NOTICE
+   TARGET IDENTITY (real values shipped -- no redaction)
  - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
+        Product / exe / dirs :  tessoa / tessoa.exe / %APPDATA%\tessoa
+                                 (also under %LOCALAPPDATA%\tessoa)
+        Baked license pubkey :  52dde2592618463044d4b602535494c2
+                                 771dd08a5c3a2c0ca6804bb34e6f7167
+                                 (unchanged across versions; v0.28.1 @ file 0xBF647B)
+        Vendor host / account:  api.keygen.sh
+                                 /v1/accounts/tessoa/licenses/actions/validate-key
+        Online recheck route :  api.tessoa.com / api.tessoa.cn (dual, Seoul)
+        Sample MD5 guard     :  9b5996c2f9119fd3e7946ebd886dd6ce (v0.28.1 pristine)
+        Plugin signature key :  91ee607d... @ 0xBF6625  (NOT the license key -- do not swap)
+
         Not shipped: the target binary, the patched binary, raw evidence,
-        the full client report, the self-signing private key, the real
-        MachineGuid and device fingerprint.
+        the self-signing private key, the real MachineGuid and device
+        fingerprint (derived live).
 
-        Redacted in source:  baked pubkey -> <REDACTED_BAKED_PUBKEY>
-                             vendor host / account -> <vendor-host> / <vendor-account>
-                             product + dirs -> <product>
-                             sample MD5 guard -> <sample-md5>
-        Kept on purpose:     offsets, function addresses, the 1209600 constant
-                             -- without them the method is not reproducible.
-
-        src/keygen.py refuses to run while placeholders remain (--check-config
-        lists them) rather than silently patching a wrong offset.
+        src/keygen.py still refuses to run if any CONFIG value looks like an
+        unfilled placeholder (--check-config lists them) rather than silently
+        patching the wrong offset.
 
  - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
    FIXING IT (vendor notes)
