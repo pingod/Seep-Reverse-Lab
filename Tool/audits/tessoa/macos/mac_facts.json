@@ -1,0 +1,27 @@
+{
+ "NAME": "tessoa",
+ "APP": "tessoa.app",
+ "BID": "com.no-needto-recall.tessoa",
+ "VER": "0.28.1",
+ "BUILD": "20261006.062310",
+ "binpath": "/Applications/tessoa.app/Contents/MacOS/tessoa",
+ "BK": "/Users/pavia/githome/tessoa-mac-backup/tessoa.orig",
+ "DATA": "/Users/pavia/Library/Application Support/tessoa",
+ "hosts": [
+  "api.tessoa.cn",
+  "api.tessoa.com",
+  "download.tessoa.com"
+ ],
+ "lic_ini": "# tessoa license store —— 自动生成，勿手改\nschema = 1\nuuid = 8b6e25c5-94cd-44ef-93e0-8a590f78f63e\ninstall_id = ca85e674886c4e388fcbcb415b850eab\nlicense_key = TESSOA-LAB-0441-FF5B-465D\nupdates = lifetime\nexpiration = 2106777600\nlast_validated = 1791436301\nquota = 5\nactivated = 2106777600\ndevice_fp = 5ac540371d81bd7c\n",
+ "lic_sig": "# tessoa license proof —— 服务端签过的原始响应，勿手改（改一个字节即失效）\nschema = 1\nhost = api.keygen.sh\npath = /v1/accounts/tessoa/licenses/actions/validate-key\ndate = Sun, 05 Oct 2036 05:11:41 GMT\ndigest = sha-256=k7qLGqBK84uyaMqK/49nekGtZAeitaLYuIrTsTHPweI=\nsignature = algorithm=\"ed25519\",signature=\"HSmMxMUGgrhRgdjpbn5zgTu2YUhgHaSnZcF/Qg8Ath26x2RgwZgKjol7FS8UOzmaxcCPvjBjB0GvmXGDZ1zkCw==\",headers=\"host date digest\"\nbody_b64 = eyJtZXRhIjp7ImNvZGUiOiJWQUxJRCIsInNjb3BlIjp7ImZpbmdlcnByaW50IjoiNWFjNTQwMzcxZDgxYmQ3YyJ9fSwiZGF0YSI6eyJpZCI6IjhiNmUyNWM1LTk0Y2QtNDRlZi05M2UwLThhNTkwZjc4ZjYzZSIsImF0dHJpYnV0ZXMiOnsiZXhwaXJ5IjoiMjAzNi0xMC0wNVQwMDowMDowMC4wMDBaIiwia2V5IjoiVEVTU09BLUxBQi0wNDQxLUZGNUItNDY1RCIsIm1ldGFkYXRhIjp7ImxpY2Vuc2VlIjoiU2VlcCBSZXZlcnNlIExhYiIsImVkaXRpb24iOiJzdGFuZGFyZCIsInVwZGF0ZXMiOiJsaWZldGltZSJ9fX19\n",
+ "lastlog": "==== tessoa 0.28.1 pid=91781 @ 2026-10-08 16:23:49.725 ====\n2026-10-08 16:23:49.724 +    648ms  [dir-stats] dirstats.ini 回灌 749 条（指纹 082f2307b4e88e77）\n2026-10-08 16:23:50.075 +    999ms  [WARN] license: POST /v1/accounts/8f8c9840-a93a-4c22-bae0-18bb5aef8f1b/licenses/actions/validate-key via api.tessoa.cn: untrusted reply (signature verification failed (HTTP 200, signed))\n2026-10-08 16:23:51.877 +   2801ms  [WARN] license: POST /v1/accounts/8f8c9840-a93a-4c22-bae0-18bb5aef8f1b/licenses/actions/validate-key via api.tessoa.com: untrusted reply (signature verification failed (HTTP 200, signed))\n",
+ "pids": [
+  "91781"
+ ],
+ "cs": [
+  "CodeDirectory v=20400 size=23764 flags=0x2(adhoc) hashes=732+7 location=embedded",
+  "TeamIdentifier=not set"
+ ],
+ "store": "# tessoa license store —— 自动生成，勿手改\n",
+ "proof": "# tessoa license proof —— 服务端签过的原始响应，勿手改（改一个字节即失效）\n"
+}

@@ -1,0 +1,21 @@
+# Tool/audits stores curated deliverables only (reports, methodology,
+# read-only baselines, checked tools).
+# The patterns below are a defensive backstop: real samples, private keys,
+# signed licenses, patch binaries and IDA databases must live in lab/ only.
+# NOTE: keep this file ASCII + LF so PowerShell 5.1 never mangles it.
+*.exe
+*.dll
+*.dylib
+*.so
+mint_keys.json
+license.ini
+license.sig
+*.orig.*
+*.patched.*
+*.i64
+*.idb
+*.id0
+*.nam
+*.til
+__pycache__/
+*.pyc
