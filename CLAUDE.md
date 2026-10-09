@@ -6,7 +6,7 @@
 
 ## 一、 项目背景与定位
 
-本工程为面向 AI Agent 的**多平台客户端逆向工程与授权流安全审计（CWE-602）工作台**。深度覆盖 Windows PE/DLL、Android APK/DEX/SO、Linux ELF。包含 9 大逆向 Skill、4 大核心 MCP 服务、289+ 篇实战知识库与 13 个脱敏工业架构范式。
+本工程为面向 AI Agent 的**多平台客户端逆向工程与授权流安全审计（CWE-602）工作台**。深度覆盖 Windows PE/DLL、Android APK/DEX/SO、Linux ELF。包含 9 大逆向 Skill、4 大核心 MCP 服务、289+ 篇实战知识库与 15 个脱敏工业架构范式。
 
 ---
 
@@ -26,6 +26,25 @@ powershell -ExecutionPolicy Bypass -File .\install.ps1
 chmod +x setup/install.sh
 ./setup/install.sh
 ```
+
+### 1b. 已有用户更新（重要）
+若用户说 **“更新工作台”**、**“拉取最新版本”**、**“工作台出新版了怎么升”**，Agent 必须执行：
+
+**Windows**：
+```powershell
+powershell -ExecutionPolicy Bypass -File .\setup\update.ps1
+```
+
+**Linux / macOS**：
+```bash
+./setup/update.sh
+```
+
+> 更新脚本是**幂等且无损**的：自动 `git stash` 保护本地改动、自动备份配置、
+> 增量合并 `mcp.json`（**绝不删除用户自行添加的 MCP 条目**）、
+> 更新后自动跑基准自检。
+> **不要**让用户重新克隆仓库或手动拷贝文件。
+> 完成后必须提醒用户：**完全重启 Agent 会话**，然后发 `lab：` 继续开工。
 
 ### 2. 自动化校验与输出规范（★ 强制执行官方基准校对）
 - **部署完成后，Agent 必须主动执行详细校对**，严禁在未做验证前直接向用户声称“部署完成”；
@@ -70,7 +89,7 @@ Seep\
 │   ├── mcp\           seep MCP（23 工具）+ Tool\ 运行时依赖
 │   │   └── Tool\safe\ 内置 Jadx、Radare2、Apktool、Hook 引擎等
 │   ├── prompts\       SYSTEM.md、AGENTS.md 与安全扩展
-│   ├── cases\         13 个脱敏项目工程（项目 A ~ 项目 M）
+│   ├── cases\         15 个脱敏项目工程（项目 A ~ 项目 O）
 │   ├── upstream\      3 大开源项目完整镜像 (apk-reverse, open-tgtylab, open-reverselab)
 │   ├── docs\          MCP-SETUP、DOWNLOADS、PROVENANCE 等
 │   └── scripts\       任务沙盒初始化与签名工作流

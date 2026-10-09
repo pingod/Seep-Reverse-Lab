@@ -160,11 +160,11 @@ npm:pi-goal-x
 | :--- | :--- |
 | **上游** | https://github.com/HexRaysSA/ida-mcp |
 | **PyPI** | `ida-mcp`（由 `uvx` 按需拉取，不必预装） |
-| **实测版本** | **20260924.0.3** |
+| **实测版本** | **20261003.0.1**（`uvx` 不钉版本，每次解析到 PyPI 最新） |
 | **启动** | `<uvx 绝对路径>` `ida-mcp stdio --agent=<名字>` |
-| **GUI 插件** | 包内自带 `Tool/mcp/Tool/safe/ida-mcp-plugin/ida-mcp-plugin-20260924.0.3.zip` |
+| **GUI 插件** | 包内自带 `Tool/mcp/Tool/safe/ida-mcp-plugin/ida-mcp-plugin-20261003.0.1.zip`（sha256 `fa8c36de…0ccd84`） |
 | **插件安装到** | `%APPDATA%\Hex-Rays\IDA Pro\plugins\` |
-| **插件运行时依赖** | `ida-nexus>=0.13.0`（装进 IDA 自带的 `python311`） |
+| **插件运行时依赖** | `ida-nexus>=0.13.3`（装进 IDA 自带的 `python311`） |
 | **提供的工具** | 6 个：`open_database` · `execute_python` · `reference` · `list_databases` · `save_database` · `close_database` |
 | **后端** | idalib（无头，按需拉起）/ gui（附加到已开 IDA） |
 | **⚠️ 前置** | **需自备 IDA Pro ≥ 9.4 + Python ≥ 3.11**（见 `MANUAL/IDA-PRO.md`） |
@@ -260,8 +260,8 @@ pi install npm:pi-mcp-extension
 | **jadx** | https://github.com/skylot/jadx/releases → `jadx-x.x.x.zip` | `Tool/mcp/Tool/safe/jadx/` | 解压后 `bin/jadx.bat` 应在 |
 | **radare2** | https://github.com/radareorg/radare2/releases → `radare2-x.x.x-w64.zip` | `Tool/mcp/Tool/safe/radare2/` | 解压后 `bin/radare2.exe` 应在 |
 | **apktool** | https://github.com/iBotPeaches/Apktool/releases → `apktool_x.x.x.jar` | `Tool/mcp/Tool/safe/apktool/apktool.jar` | 需另建 `apktool.bat` |
-| **ida-nexus** | `& "<IDA>\python311\python.exe" -m pip install "ida-nexus>=0.13.0"` | IDA 的 site-packages | 官方插件依赖 |
-| **官方 ida-mcp 插件** | 包内 `ida-mcp-plugin-20260924.0.3.zip` | `%APPDATA%\Hex-Rays\IDA Pro\plugins\` | 或由 `install-ida.ps1` 自动装 |
+| **ida-nexus** | `& "<IDA>\python311\python.exe" -m pip install "ida-nexus>=0.13.3"` | IDA 的 site-packages | 官方插件依赖 |
+| **官方 ida-mcp 插件** | 包内 `ida-mcp-plugin-20261003.0.1.zip` | `%APPDATA%\Hex-Rays\IDA Pro\plugins\` | 或由 `install-ida.ps1` 自动装 |
 | **uv / uvx** | https://astral.sh/uv | 加入 PATH | 官方 MCP 的启动器 |
 | **playwright-mcp** | `npm i @playwright/mcp` | `Tool/mcp/Tool/safe/playwright-mcp/` | 或用 npx |
 

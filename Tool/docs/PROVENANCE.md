@@ -124,7 +124,7 @@ Android(5)    seep_apk_info · _decompile · _unpack · _smali_search · _gen_ho
 | :--- | :--- | :--- |
 | **MCP 服务** | PyPI `ida-mcp`（`uvx` 按需拉取，不落盘） | `uvx ida-mcp stdio --agent=<name>` |
 | **GUI 插件** | `Tool/mcp/Tool/safe/ida-mcp-plugin/`（随包） | 装到 `%APPDATA%\Hex-Rays\IDA Pro\plugins\` |
-| **插件依赖** | `ida-nexus>=0.13.0` | 装进 IDA 内置的 `python311` |
+| **插件依赖** | `ida-nexus>=0.13.3` | 装进 IDA 内置的 `python311` |
 | **⭐ 宿主依赖** | **你自备的 IDA Pro ≥ 9.4** | 商业授权，**不随包分发** |
 | **探测/安装** | `setup/install-ida.ps1` | 写 `mcp.json` 的 `ida` 条目 |
 

@@ -7,7 +7,7 @@
     "keywords": ["python", "automation", "mcp", "ai"],
     "description": "Expose IDA GUI databases through IDA Nexus for the official IDA MCP server.",
     "idaVersions": ">=9.4",
-    "version": "20260924.0.3",
+    "version": "20261003.0.1",
     "license": "MIT",
     "authors": [
       {
@@ -20,7 +20,7 @@
     },
     "requiresPython": ">=3.11",
     "pythonDependencies": [
-      "ida-nexus>=0.13.0"
+      "ida-nexus>=0.13.3"
     ]
   }
 }

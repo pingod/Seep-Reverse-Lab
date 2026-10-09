@@ -14,7 +14,7 @@
 | apksigner | apk-reverse | APK 签名 | no | — | — | Missing | apk-reverse/scripts/rebuild-sign-install.ps1 |
 | zipalign | apk-reverse | APK 对齐 | no | — | — | Missing | apk-reverse/scripts/rebuild-sign-install.ps1 |
 | idalib-mcp | ida-reverse | IDA Pro idalib MCP HTTP/stdio 服务器 | no | — | — | Missing | — |
-| ida-mcp | ida-reverse | 官方 Hex-Rays IDA MCP（由 uvx 拉起，无固定端口） | yes | D:\Program Files\Python\Python314\Scripts\uvx.exe | 20260924.0.3 | Get-Command | — |
+| ida-mcp | ida-reverse | 官方 Hex-Rays IDA MCP（由 uvx 拉起，无固定端口） | yes | D:\Program Files\Python\Python314\Scripts\uvx.exe | 20261003.0.1 | Get-Command | — |
 | ida-pro-mcp | ida-reverse | [已废弃] mrexodia 版 IDA MCP；保留仅为历史索引兼容 | no | — | — | Missing | — |
 | ida | ida-reverse | IDA Pro 主程序 | yes | D:\Program Files\IDA Professional 9.4\ida.exe | — | FallbackPath | — |
 | binaryninja | binary-ninja-reverse | Binary Ninja 商业逆向平台（GUI/Python API） | no | — | — | Missing | — |

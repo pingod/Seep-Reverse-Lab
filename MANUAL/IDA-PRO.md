@@ -33,11 +33,11 @@ IDA Pro **9.4+**（官方 `ida-mcp` 插件要求 `idaVersions >= 9.4`、`require
 
 3. **给 IDA 的 Python 装 `ida-nexus`**（插件的运行时依赖）：
    ```powershell
-   & "<IDA安装目录>\python311\python.exe" -m pip install "ida-nexus>=0.13.0"
+   & "<IDA安装目录>\python311\python.exe" -m pip install "ida-nexus>=0.13.3"
    ```
 
 4. **装官方 GUI 插件**（`install-ida.ps1` 用的是包内自带的发行包，离线可用）：
-   源文件在 `Tool/mcp/Tool/safe/ida-mcp-plugin/ida-mcp-plugin-20260924.0.3.zip`，
+   源文件在 `Tool/mcp/Tool/safe/ida-mcp-plugin/ida-mcp-plugin-20261003.0.1.zip`，
    安装位置为 `%APPDATA%\Hex-Rays\IDA Pro\plugins\`。
 
 5. **写 `mcp.json`** —— `install-ida.ps1` 会自动替换 `ida` 条目；手工填则：

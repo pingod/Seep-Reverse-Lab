@@ -112,7 +112,7 @@
                       "is_executable":  true,
                       "is_directory":  false,
                       "resolved_path":  "D:\\Program Files\\Python\\Python314\\Scripts\\uvx.exe",
-                      "version":  "20260924.0.3",
+                      "version":  "20261003.0.1",
                       "source":  "Get-Command",
                       "script_refs":  [
                                           null

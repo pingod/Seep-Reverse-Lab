@@ -1,15 +1,15 @@
 // ============================================================================
-//  bridge.c —— 项目L 内嵌本地翻译网关
+//  bridge.c —— 项目O 内嵌本地翻译网关
 //
-//  作用: 在 项目L 进程内起一个 127.0.0.1 的 HTTP 服务, 把 项目L 的翻译
-//        请求转换成「任意大模型 API」调用, 再把结果翻译回 项目L 的格式。
+//  作用: 在 项目O 进程内起一个 127.0.0.1 的 HTTP 服务, 把 项目O 的翻译
+//        请求转换成「任意大模型 API」调用, 再把结果翻译回 项目O 的格式。
 //
 //  架构:
-//      项目L  {API_ENDPOINT} = http://127.0.0.1:<port>
+//      项目O  {API_ENDPOINT} = http://127.0.0.1:<port>
 //         │
 //         ├─ /api2/ai/translate/*  ──▶ 调用用户配置的大模型 API (WinHTTP/HTTPS)
-//         │                              └─▶ 返回 项目L 期望的 JSON
-//         └─ 其它请求              ──▶ 透明转发到 https://api.项目L.cn
+//         │                              └─▶ 返回 项目O 期望的 JSON
+//         └─ 其它请求              ──▶ 透明转发到 https://api.项目O.cn
 //
 //  支持的大模型 API 风格 (自动识别):
 //      * OpenAI 兼容  (/chat/completions)  —— OpenAI / DeepSeek / Kimi / 智谱 /
@@ -17,7 +17,7 @@
 //      * Google Gemini (generativelanguage.googleapis.com)
 //      * Anthropic    (/v1/messages)
 //
-//  配置 (项目L_hook.ini):
+//  配置 (项目O_hook.ini):
 //      llm_url   大模型接口地址 (UI 的 APP ID 栏)
 //      llm_key   大模型 API Key (UI 的 密钥 栏)
 //      llm_model 可选, 覆盖默认模型名
@@ -30,7 +30,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "项目L_bridge.h"
+#include "项目O_bridge.h"
 
 #pragma comment(lib, "ws2_32.lib")
 #pragma comment(lib, "winhttp.lib")
@@ -341,7 +341,7 @@ int http_request(const char* method, const char* url,
     }
     wmethod = u2w(method);
 
-    hS = WinHttpOpen(L"项目LHook/1.0", WINHTTP_ACCESS_TYPE_DEFAULT_PROXY,
+    hS = WinHttpOpen(L"项目OHook/1.0", WINHTTP_ACCESS_TYPE_DEFAULT_PROXY,
                      WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, 0);
     if (!hS) { HookLog("bridge: WinHttpOpen failed %lu", GetLastError()); goto done; }
     WinHttpSetTimeouts(hS, timeoutMs, timeoutMs, timeoutMs, timeoutMs);
@@ -697,7 +697,7 @@ static void http_reply(SOCKET s, int status, const char* ctype, const char* body
 }
 
 
-// 每次翻译请求前热重读 INI —— 用户直接编辑 项目L_hook.ini 即可即时生效
+// 每次翻译请求前热重读 INI —— 用户直接编辑 项目O_hook.ini 即可即时生效
 static void ReloadFromIni(void)
 {
     if (!g_cfg.iniPath[0]) return;
@@ -789,7 +789,7 @@ static void handle_translate(SOCKET s, const char* path, const char* body, int b
                 sb_str(&out, ",\"targetLang\":"); sb_esc(&out, tgtLang ? tgtLang : "zh-cn");
                 sb_str(&out, "}");
                 if (tt) free(tt);
-                break;   /* 项目L 一次只取第一个 */
+                break;   /* 项目O 一次只取第一个 */
             }
             if (out.len == 0) sb_str(&out, "{\"result\":\"\",\"translatedText\":\"\"}");
         }
@@ -808,7 +808,7 @@ static void handle_forward(SOCKET s, const char* method, const char* path,
     SBuf url, hdr;
     HttpResp resp;
     char host[128];
-    const char* up = g_cfg.upstreamHost[0] ? g_cfg.upstreamHost : "api.项目L.cn";
+    const char* up = g_cfg.upstreamHost[0] ? g_cfg.upstreamHost : "api.项目O.cn";
     strncpy(host, up, sizeof(host) - 1); host[sizeof(host)-1] = 0;
 
     sb_init(&url);
@@ -943,7 +943,7 @@ int BridgeStart(const BridgeConfig* cfg)
     if (g_listen != INVALID_SOCKET) return g_port;
 
     memcpy(&g_cfg, cfg, sizeof(g_cfg));
-    if (!g_cfg.upstreamHost[0]) strcpy(g_cfg.upstreamHost, "api.项目L.cn");
+    if (!g_cfg.upstreamHost[0]) strcpy(g_cfg.upstreamHost, "api.项目O.cn");
 
     if (WSAStartup(MAKEWORD(2, 2), &wsa) != 0) {
         HookLog("bridge: WSAStartup failed");
@@ -995,7 +995,7 @@ void BridgeSetTimeout(int ms) { if (ms > 1000) g_llmTimeoutMs = ms; }
 void BridgeUpdateConfig(const BridgeConfig* cfg)
 {
     memcpy(&g_cfg, cfg, sizeof(g_cfg));
-    if (!g_cfg.upstreamHost[0]) strcpy(g_cfg.upstreamHost, "api.项目L.cn");
+    if (!g_cfg.upstreamHost[0]) strcpy(g_cfg.upstreamHost, "api.项目O.cn");
     HookLog("bridge: config updated (llm=%s key=%s model=%s style=%d)",
             g_cfg.llmUrl, g_cfg.llmKey[0] ? "<set>" : "<empty>",
             g_cfg.llmModel, g_cfg.llmStyle);

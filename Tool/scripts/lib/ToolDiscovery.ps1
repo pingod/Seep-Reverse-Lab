@@ -126,7 +126,7 @@ function Get-ReverseToolCatalog {
             Name = 'ida-mcp'
             Skill = 'ida-reverse'
             Purpose = '官方 Hex-Rays IDA MCP（由 uvx 拉起，无固定端口）'
-            FixedVersion = '20260924.0.3'
+            FixedVersion = '20261003.0.1'
             VersionArgs = @('--help')
             Fallbacks = @(
                 # server 靠 uvx 按需启动，所以「装没装」等价于「uvx 在不在 + 插件/依赖在不在」

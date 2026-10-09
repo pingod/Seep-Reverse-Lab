@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/angusdevgo/seep-reverse-lab"><img src="https://img.shields.io/badge/Release-v1.3.0-brightgreen.svg?style=for-the-badge&logo=github" alt="Release"></a>
+  <a href="https://github.com/angusdevgo/seep-reverse-lab"><img src="https://img.shields.io/badge/Release-v1.4.0-brightgreen.svg?style=for-the-badge&logo=github" alt="Release"></a>
   <a href="https://github.com/angusdevgo/seep-reverse-lab/blob/main/LICENSE"><img src="https://img.shields.io/badge/License-GPL--3.0-blue.svg?style=for-the-badge" alt="License"></a>
   <img src="https://img.shields.io/badge/Platform-Windows%20%7C%20Android%20%7C%20Linux-0078D6?style=for-the-badge&logo=windows" alt="Platform">
   <img src="https://img.shields.io/badge/Architecture-x86%20%7C%20x64%20%7C%20ARM64-orange?style=for-the-badge" alt="Architecture">
@@ -60,7 +60,7 @@ Users provide plain-language technical goals; the agent autonomously performs pl
 | 🔧 **Toolchain Fragmentation** | 23 MCP tools wrapping Radare2, JADX, Apktool, Frida — unified API, zero manual switching |
 | 🧠 **Agent Decision Drift** | `softseep` orchestrator: two-stage auto-classification (Platform × 9 Task Types) + 7-gate decision tree |
 | 🛡️ **Model Refusal in Security Audits** | Three-tier mitigation: `BLOCK_NONE` injection + transparent terminology mapping + cognitive redirection |
-| 📚 **Ephemeral Knowledge** | 289 technical field journals + 14 desensitized industrial paradigms + "search KB before executing" enforced discipline |
+| 📚 **Ephemeral Knowledge** | 289 technical field journals + 15 desensitized paradigms + "search KB before executing" enforced discipline |
 | 📦 **Setup Friction** | One-click `install.ps1` → supports Pi Agent, Claude Code, DeepSeek Harness (DSH), Codex / OpenCode |
 
 ---
@@ -143,7 +143,8 @@ The agent autonomously:
 - 🔍 **CWE-602 Authorization Audit**: Minutes to determine if a feature gate is local-boolean or server-authoritative
 - 🛡️ **Authenticode Signature Preservation**: DLL search-order hijacking (`version.dll` / `sentry.dll`) keeps host binary signature intact
 - 🔄 **PoC Self-Healing Loop**: Frida error → root-cause mapping → auto-fix → re-execute (up to 3 attempts, then structured handoff)
-- 💎 **9 Industrial Architecture Paradigms**: Monolithic offline PE → multi-process IPC → VM arbitration → .NET keygen → weak RSA bypass *(fully desensitized)*
+- 💎 **14 Industrial Architecture Paradigms**: Monolithic offline PE → multi-process IPC → VM arbitration → .NET keygen → weak RSA bypass → Java agent → .NET VM bypass *(fully desensitized)*
+- 🌐 **Transport-Layer Compliance Relay**: Optional localhost relay rewrites colloquial user input into compliant terminology before it leaves the machine — covering any Agent that supports a custom `baseUrl` (Pi Agent / Claude Code / Codex). Zero new dependencies, zero disk writes, context-injection guarded.
 - 🔌 **Offline-Ready**: All toolchains pre-bundled (251 MB), zero network dependencies after setup
 
 ---
@@ -164,6 +165,8 @@ Seep\ (251 MB)
 ├── DSH-PROFILE.md                 ← DeepSeek Harness Cordis plugin config template
 ├── check.bat                      ← ⭐ Double-click one-shot health verifier (Windows)
 ├── check.ps1                      ← PowerShell health verifier entry point
+├── VERSION                        ← Current version marker
+├── CHANGELOG.md                   ← User-facing release notes
 │
 ├── Tool\
 │   ├── skill\                     ← 9 specialized reverse engineering skills
@@ -193,13 +196,14 @@ Seep\ (251 MB)
 │   │   ├── AGENTS.md              ← Cross-agent portable instructions
 │   │   └── extensions\            ← BLOCK_NONE injection + terminology mapping
 │   │
-│   ├── cases\                     ← 14 industrial paradigm projects (A ~ N, incl. version-evolution archive v2)
+│   ├── cases\                     ← 15 desensitized industrial paradigm projects (A ~ O, incl. version-evolution archive v2)
 │   ├── upstream\                  ← Upstream verification & attribution layer (3 Full mirrors)
 │   │   ├── apk-reverse\           ← newliver666/apk-reverse (Android RE & offline test suite)
 │   │   ├── open-tgtylab\          ← GeniusHu-tgty/Open-tgtylab (Security lab framework & workflows)
 │   │   └── open-reverselab\       ← LING71671/open-reverselab (Knowledge base, boards & MCP ecosystem)
 │   ├── docs\                      ← Engineering reference docs
 │   └── scripts\                   ← Workspace automation scripts
+│       └── compliance-relay\      ← 🌐 Transport-layer compliance relay (stdlib-only, 3 protocols)
 │
 ├── setup\                         ← Automated install, repair & self-check scripts
 └── MANUAL\                        ← 5 Tactical SOP guides
@@ -278,10 +282,34 @@ chmod +x setup/install.sh
 | **Claude Code** | `CLAUDE.md` (project root) | `.mcp.json` (project root) | Run `powershell .\setup\generate-configs.ps1` to resolve paths, then launch `claude` in root. |
 | **DeepSeek Harness** | `Tool/prompts/AGENTS.md` | `DSH-PROFILE.md` | Run `setup\generate-configs.ps1` to produce `cordis.generated.yml` (official `- insert:` format), use `dsh web --patch ...` or paste into profile. |
 | **OpenCode / Codex** | `AGENTS.md` (project root) | `opencode.jsonc` | Generated by `setup\generate-configs.ps1` (compliant with official OpenCode `mcp` schema), launch `opencode` in root. |
-| **Qoder** | `qoder.md` (project root) | `.mcp.json` (project root) + `.qoder/settings.json` | Open workspace root in Qoder — `qoder.md` auto-loads, MCP auto-enabled |
+| **Qoder** | `qoder.md` (project root) | `.mcp.json` (project root) + `.qoder/settings.json` | Open the workspace root in Qoder — `qoder.md` auto-loads, project MCP servers are enabled automatically. |
 
 > 📖 **Comprehensive Multi-Agent Guide**: For detailed step-by-step setup, cross-platform caveats, and exhaustive troubleshooting FAQ, see [**MANUAL/DEPLOYMENT.md**](MANUAL/DEPLOYMENT.md).
-### 4. Verify Your Deployment
+
+### 4. Updating an Existing Installation
+
+Already deployed? No need to re-clone or copy files by hand. The updater is **idempotent and lossless** — your model credentials and any custom MCP servers you added are never overwritten.
+
+```powershell
+# Windows
+powershell -ExecutionPolicy Bypass -File .\setup\update.ps1
+```
+```bash
+# Linux / macOS
+./setup/update.sh
+```
+
+It will: stash local changes → `git pull` → print the changelog → back up your config → incrementally sync skills/prompts/MCP entries → verify user data was preserved → run the full health check.
+
+| Flag | Effect |
+|---|---|
+| `-DryRun` / `--dry-run` | Show what would happen, modify nothing |
+| `-NoPull` / `--no-pull` | Skip `git pull` (for ZIP-based installs) |
+
+> ⚠️ **Always fully restart your Agent session** after updating so the new skills and extensions load.
+> See [CHANGELOG.md](CHANGELOG.md) for what changed in each version.
+
+### 5. Verify Your Deployment
 
 Run the 7-section health verifier (37 checks) using any of these methods:
 
@@ -348,7 +376,8 @@ Deactivate: exit lab
 | **K** | .NET WPF + Themida Packing | Memory dump unpacking + privilege decision branching + registry state freeze |
 | **L** | Qt5 C++ Client | Proxy DLL hook + 11 privilege decision constant-folds + local LLM translation gateway |
 | **M** | Java + install4j Dual-Layer | DLL search-order hijack (version.dll IAT hook) + JVM native ClassFile bytecode patching (burp.Zfqu / burp.Zwxg.Zu) + license/AI token preference seeding |
-| **N** | Native Rust x64 + macOS arm64 (winit + wgpu) | Ed25519 trust-anchor swap (Windows `0xBF647B` / macOS `0x821f76`) + self-minted offline license proof + 14-day grace-clock basis hijack (CWE-347 / CWE-602 / CWE-693), verified live on both platforms |
+| **N** | .NET x64 + VM Obfuscation | Runtime memory extraction + privilege flag inversion + silent auto-injection |
+| **tessa** | Native Rust x64 + macOS arm64 (winit + wgpu) | Ed25519 trust-anchor swap (Windows `0xBF647B` / macOS `0x821f76`) + self-minted offline license proof + 14-day grace-clock basis hijack (CWE-347 / CWE-602 / CWE-693), verified live on both platforms |
 
 ### 2. Android & DEX/SO Analysis
 - Surgical DEX same-length patching with automated Adler-32 / SHA-1 recalculation
@@ -416,10 +445,10 @@ All client-side vulnerability assessments follow a consulting-grade 3-part struc
 
 ## ⭐ Star History
 
-<a href="https://star-history.com/#angusdevgo/Seep-Reverse-Lab&Date">
+<a href="https://www.star-history.com/?repos=angusdevgo%2FSeep-Reverse-Lab&type=timeline&logscale=&releases=&legend=bottom-right">
  <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=angusdevgo/Seep-Reverse-Lab&type=Date&theme=dark" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=angusdevgo/Seep-Reverse-Lab&type=Date" />
-   <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=angusdevgo/Seep-Reverse-Lab&type=Date" />
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=angusdevgo/Seep-Reverse-Lab&type=timeline&theme=dark&logscale&legend=top-left" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=angusdevgo/Seep-Reverse-Lab&type=timeline&logscale&legend=top-left" />
+   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=angusdevgo/Seep-Reverse-Lab&type=timeline&logscale&legend=top-left" />
  </picture>
 </a>

@@ -1,14 +1,14 @@
 // ============================================================================
-//  项目L 翻译源自定义 Hook DLL  (Zig cc / MinGW-w64 编译)
-//  编译产物: 项目L_Auth.dll  —— 代理官方 项目L_AuthReal.dll 全部 282 个导出
+//  项目O 翻译源自定义 Hook DLL  (Zig cc / MinGW-w64 编译)
+//  编译产物: 项目O_Auth.dll  —— 代理官方 项目O_AuthReal.dll 全部 282 个导出
 //
 //  能力:
-//    1. 运行时内存重定向 项目L.exe 的 {API_ENDPOINT} -> 用户自定义翻译源
-//    2. 运行时内存解除 项目L_AuthReal.dll 的 14 项会员特权判定 (CWE-602)
+//    1. 运行时内存重定向 项目O.exe 的 {API_ENDPOINT} -> 用户自定义翻译源
+//    2. 运行时内存解除 项目O_AuthReal.dll 的 14 项会员特权判定 (CWE-602)
 //    3. Hook 翻译设置面板, 注入「自定义翻译源」下拉项
-//    4. 面板销毁时持久化用户填写的接口地址到 项目L_hook.ini
+//    4. 面板销毁时持久化用户填写的接口地址到 项目O_hook.ini
 //
-//  磁盘上的官方 项目L.exe / 项目L_AuthReal.dll 保持 100% 原版 (零字节修改)
+//  磁盘上的官方 项目O.exe / 项目O_AuthReal.dll 保持 100% 原版 (零字节修改)
 //
 //  ui 配置项:
 //    0 = 完全关闭 UI 注入
@@ -19,10 +19,10 @@
 #include <stdio.h>
 #include <stdarg.h>
 #include <string.h>
-#include "项目L_bridge.h"
+#include "项目O_bridge.h"
 
 // ---------------------------------------------------------------- 目标 RVA
-#define RVA_DOMAIN      0x0CF16E0u   // "https://api.项目L.cn" 字符串槽位 (48B)
+#define RVA_DOMAIN      0x0CF16E0u   // "https://api.项目O.cn" 字符串槽位 (48B)
 #define RVA_MOV_LEN     0x02052E5u   // mov edx, imm32
 #define RVA_LEA_1       0x02052EAu   // lea rcx, [rip+..]
 #define RVA_LEA_2       0x0205316u   // lea rdx, [rip+..]
@@ -33,9 +33,9 @@
 #define VTABLE_DTOR_IDX 3
 
 /* 默认回退端点 = 官方 API (中性占位)
-   自定义大模型源由用户在 项目L 设置界面或 项目L_hook.ini 中填写,
+   自定义大模型源由用户在 项目O 设置界面或 项目O_hook.ini 中填写,
    本 DLL 不含任何私有服务地址 */
-#define DEFAULT_ENDPOINT "https://api.项目L.cn"
+#define DEFAULT_ENDPOINT "https://api.项目O.cn"
 
 // 控件偏移 (ui 结构体位于 widget+0x60)
 #define OFF_CMB_SERVICE 0x88
@@ -84,7 +84,7 @@ static const BYTE K_40555356574154[] = {0x40,0x55,0x53,0x56,0x57,0x41,0x54}; // 
 static const BYTE K_40555356574156[] = {0x40,0x55,0x53,0x56,0x57,0x41,0x56}; // UserConfig*
 
 static const KILL_PATCH g_kill[] = {
-    { 0x452070, K_40555356574154, 7, "项目L_Upgrade::checkNewVersion (自动更新检查)" },
+    { 0x452070, K_40555356574154, 7, "项目O_Upgrade::checkNewVersion (自动更新检查)" },
     { 0x1C8BB0, K_40555356574156, 7, "UserConfigGet    (云端配置拉取)" },
     { 0x1C8DD0, K_40555356574156, 7, "UserConfigUpdate (云端配置上报)" },
 };
@@ -110,7 +110,7 @@ static void BuildBridgeCfg(BridgeConfig* bc)
     strncpy(bc->llmKey,   g_llmKey,   sizeof(bc->llmKey)   - 1);
     strncpy(bc->llmModel, g_llmModel, sizeof(bc->llmModel) - 1);
     bc->llmStyle = g_llmStyle;
-    strcpy(bc->upstreamHost, "api.项目L.cn");
+    strcpy(bc->upstreamHost, "api.项目O.cn");
     strncpy(bc->iniPath, g_iniPath, sizeof(bc->iniPath) - 1);
 }
 
@@ -184,7 +184,7 @@ static void ConfigLoad(void)
 }
 
 // ---------------------------------------------------------------- 宿主校验
-static int HostIs项目L(void)
+static int HostIs项目O(void)
 {
     char path[MAX_PATH];
     char* p;
@@ -193,7 +193,7 @@ static int HostIs项目L(void)
     p = strrchr(path, '\\');
     if (!p) return 0;
     p++;
-    return (strcmp(p, "项目L.exe") == 0);
+    return (strcmp(p, "项目O.exe") == 0);
 }
 
 // ---------------------------------------------------------------- 内存写入
@@ -215,7 +215,7 @@ static BOOL PatchTranslateEndpoint(const char* domain)
     size_t dlen;
     BYTE buf[64], movlen[5], lea1[7], lea2[7];
     if (!exe) return FALSE;
-    if (!HostIs项目L()) { HookLog("redirect: host is not 项目L.exe, skipped"); return FALSE; }
+    if (!HostIs项目O()) { HookLog("redirect: host is not 项目O.exe, skipped"); return FALSE; }
     base = (BYTE*)exe;
     dlen = strlen(domain);
     if (dlen == 0 || dlen > DOMAIN_MAX) { HookLog("redirect: bad len %d", (int)dlen); return FALSE; }
@@ -245,7 +245,7 @@ static void PatchVip(HMODULE real)
 {
     BYTE* base;
     int done = 0, skip = 0, fail = 0, i;
-    if (!real) { HookLog("vip: 项目L_AuthReal.dll not loaded"); return; }
+    if (!real) { HookLog("vip: 项目O_AuthReal.dll not loaded"); return; }
     base = (BYTE*)real;
     for (i = 0; i < (int)(sizeof(g_vip)/sizeof(g_vip[0])); i++) {
         const VIP_PATCH* p = &g_vip[i];
@@ -264,7 +264,7 @@ static void PatchNoCloud(void)
     BYTE* base;
     int done = 0, skip = 0, fail = 0, i;
     if (!exe) return;
-    if (!HostIs项目L()) { HookLog("nocloud: host is not 项目L.exe, skipped"); return; }
+    if (!HostIs项目O()) { HookLog("nocloud: host is not 项目O.exe, skipped"); return; }
     base = (BYTE*)exe;
     for (i = 0; i < (int)(sizeof(g_kill) / sizeof(g_kill[0])); i++) {
         const KILL_PATCH* p = &g_kill[i];
@@ -298,7 +298,7 @@ typedef int         (*fn_currentIndex)(void* combo);
 typedef void*       (*fn_text)(void* edit, void* retSlot);       // rcx = this (edit), rdx = retSlot
 typedef void*       (*fn_toUtf8)(const void* qs, void* retSlot); // rcx = this (qs), rdx = retSlot
 typedef const char* (*fn_constData)(void* ba);
-typedef void*       (*fn_new)(unsigned long long size);      // 项目L 内部 operator new
+typedef void*       (*fn_new)(unsigned long long size);      // 项目O 内部 operator new
 typedef void        (*fn_leCtor)(void* self, void* parent);  // QLineEdit::QLineEdit(QWidget*)
 typedef void        (*fn_setPh)(void* edit, const void* qs); // setPlaceholderText
 typedef int         (*fn_rowCount)(void* grid);
@@ -330,7 +330,7 @@ static fn_setCurrentIndex p_setCurIdx = NULL;
 static fn_msgBox       p_msgBox    = NULL;   // QMessageBox::information
 static fn_msgBox       p_msgBoxC   = NULL;   // QMessageBox::critical
 
-#define RVA_OP_NEW  0x0C73CBCu   // 项目L 内部 operator new (全程序 3910 处调用)
+#define RVA_OP_NEW  0x0C73CBCu   // 项目O 内部 operator new (全程序 3910 处调用)
 #define SZ_LINEEDIT 0x30         // sizeof(QLineEdit) 实测
 
 static void* g_widget   = NULL;
@@ -686,7 +686,7 @@ static void InstallHooks(void)
         0x48,0x89,0x4C,0x24,0x08    /* mov [rsp+8], rcx    */
     };
     /*
-     * 重要: 项目L.exe 与我们的 DLL 在 64 位地址空间上可能相隔 > 2GB,
+     * 重要: 项目O.exe 与我们的 DLL 在 64 位地址空间上可能相隔 > 2GB,
      *       因此 **绝不能** 使用 5 字节 rel32 跳转 (会溢出回绕导致
      *       0xC0000005 EXECUTE 访问违例)。统一使用 14 字节绝对跳转:
      *         FF 25 00 00 00 00   jmp qword ptr [rip+0]
@@ -694,7 +694,7 @@ static void InstallHooks(void)
      *       共覆盖目标函数前 15 字节 (3 条完整指令), 无指令切断风险。
      */
 
-    if (!exe || !HostIs项目L()) { HookLog("ui: host is not 项目L.exe, skip hooks"); return; }
+    if (!exe || !HostIs项目O()) { HookLog("ui: host is not 项目O.exe, skip hooks"); return; }
     g_ctorTarget = (BYTE*)exe + RVA_CTOR;
 
     // --- 构造函数 detour (绝对跳转 + unhook-call-rehook) ---
@@ -739,18 +739,18 @@ static DWORD WINAPI InitThread(LPVOID param)
     int i;
     (void)param;
     for (i = 0; i < 300; i++) {
-        if (GetModuleHandleA("Qt5Widgets.dll") && GetModuleHandleA("项目L_AuthReal.dll")) break;
+        if (GetModuleHandleA("Qt5Widgets.dll") && GetModuleHandleA("项目O_AuthReal.dll")) break;
         Sleep(50);
     }
     ConfigLoad();
-    HookLog("=== 项目L Hook v2.0 === endpoint=%s vip=%d ui=%d redirect=%d bridge=%d",
+    HookLog("=== 项目O Hook v2.0 === endpoint=%s vip=%d ui=%d redirect=%d bridge=%d",
             g_endpoint, g_optVip, g_optUi, g_optRedirect, g_optBridge);
     HookLog("llm_url=%s llm_key=%s llm_model=%s llm_style=%d",
             g_llmUrl[0] ? g_llmUrl : "<empty>",
             g_llmKey[0] ? "<set>" : "<empty>",
             g_llmModel[0] ? g_llmModel : "<auto>", g_llmStyle);
 
-    if (g_optVip) PatchVip(GetModuleHandleA("项目L_AuthReal.dll"));
+    if (g_optVip) PatchVip(GetModuleHandleA("项目O_AuthReal.dll"));
     if (g_optNoCloud) PatchNoCloud();
 
     /* ---- 优先启动内嵌大模型网关 (总是监听, 便于随时热切换) ---- */
@@ -787,7 +787,7 @@ BOOL WINAPI DllMain(HMODULE hModule, DWORD reason, LPVOID reserved)
         DisableThreadLibraryCalls(hModule);
         GetModuleFileNameA(hModule, g_iniPath, MAX_PATH);
         { char* p = strrchr(g_iniPath, '\\'); if (p) *(p + 1) = 0; }
-        strcat(g_iniPath, "项目L_hook.ini");
+        strcat(g_iniPath, "项目O_hook.ini");
 
         ConfigLoad();
         if (g_optRedirect) PatchTranslateEndpoint(g_endpoint);   // 纯内存写, 加载器锁内安全

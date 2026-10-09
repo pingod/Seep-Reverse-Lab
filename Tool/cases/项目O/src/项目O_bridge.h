@@ -1,4 +1,4 @@
-// 项目L_bridge.h —— 项目L 内嵌本地翻译网关
+// 项目O_bridge.h —— 项目O 内嵌本地翻译网关
 #ifndef PROJECTL_BRIDGE_H
 #define PROJECTL_BRIDGE_H
 

@@ -88,9 +88,44 @@ MCP 配置文件所在位置：
 |---|---|---|---|---|
 | **K1** | **战术实战笔记 (KB)** | `Tool/mcp/Tool/reverselab/kb/` | **≥289 篇** Markdown 文件 | `ctf-website`、`pe-reverse`、`apk-reverse`、`windows`、`general` 全量攻防笔记 |
 | **K2** | **攻击网图谱 (Boards)** | `Tool/mcp/Tool/reverselab/boards/` | 多平台拓扑文件 | 信号到战术文档的拓扑路由关系 |
-| **K3** | **脱敏实战案例库** | `Tool/cases/` | **13 个项目工程** (项目A ~ 项目M) | 覆盖单进程、多进程、VM、.NET算号、RSA、Java/install4j 双层鉴权等架构 |
+| **K3** | **脱敏实战案例库** | `Tool/cases/` | **15 个项目工程** (项目A ~ 项目O) | 覆盖单进程、多进程、VM、.NET算号、RSA、Java/install4j 双层鉴权、.NET VM 混淆加固等架构 |
 | **K4** | **上游开源完整镜像** | `Tool/upstream/` | **3 大开源项目** | `apk-reverse`、`open-tgtylab`、`open-reverselab` 完整单测与镜像 |
-| **K5** | **MANUAL 专项手册** | `MANUAL/` | **7 份核心手册** | `DEPLOYMENT` (部署)、`DEPLOYMENT-CHECKLIST` (基准清单)、`CROSS-PLATFORM` (跨平台)、`ANTI-DEBUG` (反调试)、`UNPACKING` (脱壳)、`POC-VALIDATION` (PoC自愈)、`IDA-PRO` (IDA接入) |
+| **K5** | **MANUAL 专项手册** | `MANUAL/` | **8 份核心手册** | `DEPLOYMENT` (部署)、`DEPLOYMENT-CHECKLIST` (基准清单)、`CROSS-PLATFORM` (跨平台)、`COMPLIANCE-RELAY` (合规中继与防拒)、`ANTI-DEBUG` (反调试)、`UNPACKING` (脱壳)、`POC-VALIDATION` (PoC自愈)、`IDA-PRO` (IDA接入) |
+
+---
+
+### 6. 🌐 合规转译中继基准表 (Compliance Relay · 网络层防拒)
+
+| # | 组件 | 所在相对路径 | 官方期望 | 校验方式 | 状态判定 |
+|---|---|---|---|---|---|
+| **R1** | **中继主程序** | `Tool/scripts/compliance-relay/relay.py` | 纯标准库实现，支持三协议 | `python relay.py` 可正常监听 | 🟢 **可选增强**。未使用时不影响主链路。 |
+| **R2** | **规则提取器** | `Tool/scripts/compliance-relay/extract-rules.py` | 从 TS 源单向提取 | `python extract-rules.py --check` 退出码 0 | 🟢 核心。规则表与 TS 源必须同步 |
+| **R3** | **规则表** | `Tool/scripts/compliance-relay/sensitive-rules.json` | ≥30 条规则 | 与 TS 源逐字节一致 | 🟢 生成物，禁手工编辑 |
+| **R4** | **上下文守卫白名单** | `Tool/scripts/compliance-relay/guard-prefixes.json` | 三协议各自的白名单 | 文件存在且含三个协议键 | 🟢 核心。防止污染 Agent 自身上下文 |
+| **R5** | **单元测试套件** | `Tool/scripts/compliance-relay/tests/test_relay.py` | 44 项测试 | `python -m unittest discover -s tests` 全绿 | 🟢 核心 |
+| **R6** | **本机运行配置** | `Tool/scripts/compliance-relay/relay-config.json` | 首次运行自动生成 | 文件存在（**已 gitignore，不入库**） | 🟡 运行时生成，含本机 token |
+
+> **零落盘纪律**：中继绝不写入请求体 / 响应体 / 鉴权头，日志只输出命中条数。
+> **默认关闭**：不随系统启动，不做常驻服务，需用户显式运行 `python relay.py`。
+> **覆盖协议**：`openai-completions`（Pi Agent 主力）/ `anthropic-messages`（Claude Code）/ `openai-responses`（Codex）。
+
+---
+
+### 7. 🔒 脱敏与个人隐私基准表 (Desensitization Baseline)
+
+> **硬红线**：个人隐私与运行凭据必须零残留。发布前由 `verify.ps1 -Detailed` 第 9 节强制门禁校验。
+
+| # | 检查项 | 官方期望 | 判定方式 | 状态判定 |
+|---|---|---|---|---|
+| **D1** | **个人绝对路径零残留** | 无 `C:\Users\<真实用户名>` 等本机路径 | 全深度递归扫描（排除第三方依赖与上游镜像） | 🔴 **阻断项**。命中即禁止发布 |
+| **D2** | **个人身份标识零残留** | 无个人昵称 / 品牌名 / 私有邮箱 | 同上 | 🔴 **阻断项** |
+| **D3** | **私有服务地址零残留** | 无个人中转站域名 / 私有服务器 IP | 同上 | 🔴 **阻断项** |
+| **D4** | **运行凭据零入库** | `relay-config.json`（含 token）、`opencode.jsonc`、`cordis.generated.yml` 均未被 git 追踪 | `git ls-files` 比对 | 🔴 **阻断项**。含本机绝对路径或访问令牌 |
+| **D5** | **真实密钥 / Salt 零残留** | 无真实产品 Salt、Token、私钥字面值 | 人工复核 + 通用形态扫描 | 🔴 **阻断项** |
+| **D6** | **目标产品名脱敏** | 叙述性提及一律泛化为「项目A ~ 项目N」或「同类商业软件」 | 关键词扫描 | 🟡 **可选**。**功能性标识符例外**：注册表路径 / API 域名 / 代码符号若删除即导致 PoC 无法复现，则经案例 README 明确声明后可保留原文 |
+
+> **功能性标识符例外说明**：部分案例（如项目N 的注册表路径与 API 域名、项目A 的代码符号）已在各自 README 中声明
+> “保留原文 / 删除后无法复现，属功能性必需”。此类例外属**有意决策**，不计入隐私泄露。
 
 ---
 

@@ -1,6 +1,6 @@
 # Hex-Rays IDA MCP
 
-Official Hex-Rays IDA MCP Server.
+Official Hex-Rays IDA MCP Server, see the [announcement blog post](https://hex-rays.com/blog/hex-rays-ida-mcp-server) for more information.
 
 ## Installation
 
@@ -35,9 +35,9 @@ This will install the GUI plugin and interactively offer you to install the supp
 To support IDA GUI instances when using IDA MCP, install the plugin:
 
 ```bash
-uvx ida-hcli plugin install https://github.com/HexRaysSA/ida-mcp
+uvx ida-hcli plugin install ida-mcp@https://github.com/HexRaysSA/ida-mcp
 # or if you have hcli installed:
-hcli plugin install https://github.com/HexRaysSA/ida-mcp
+hcli plugin install ida-mcp@https://github.com/HexRaysSA/ida-mcp
 ```
 
 _Note_: Without the GUI plugin, IDA MCP will still work headlessly.
