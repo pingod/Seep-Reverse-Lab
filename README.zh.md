@@ -354,7 +354,7 @@ powershell -ExecutionPolicy Bypass -File .\setup\update.ps1
 
 **权威归属定性**：断网 + 回环劫持 + 时间戳伪造，分钟级判定本地布尔 vs 服务端权威。
 
-**十四大工业级脱敏范式**：
+**十六大工业级脱敏范式**：
 
 | 项目 | 架构类型 | 核心技法 |
 |---|---|---|
@@ -373,6 +373,7 @@ powershell -ExecutionPolicy Bypass -File .\setup\update.ps1
 | **M** | Java + install4j 双层架构 | DLL 搜索顺序劫持 (version.dll IAT Hook) + JVM 原生 ClassFile 字节码插桩 (burp.Zfqu / burp.Zwxg.Zu) + 授权状态/AI Token 偏好播种 |
 | **N** | .NET x64 + VM 混淆加固 | 运行时内存抓取 + 特权标志位反转 + 自动静默注入 |
 | **tessa** | 原生 Rust x64 + macOS arm64（winit + wgpu） | Ed25519 信任锚替换（Windows `0xBF647B` / macOS `0x821f76`）+ 离线授权证明自签 + 14 天宽限期时钟基准旁路（CWE-347 / CWE-602 / CWE-693），双平台实弹验证 |
+| **O** | Electron 主进程 + V8 字节码信任路径（asar） | bytenode 字节码字符串取证 + 时钟高水位（hwm/epoch-watch）夹持对抗 + Ed25519 内嵌公钥替换 + 自签授权（纯数据层伪造被验签门禁否决，macOS arm64 CDP 实测闭环）（CWE-602 / CWE-693） |
 
 ### 2. Android 移动安全与 DEX/SO 逆向
 - 等长字节 DEX 微创修补，自动重算 Adler-32 / SHA-1

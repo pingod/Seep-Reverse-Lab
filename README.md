@@ -143,7 +143,7 @@ The agent autonomously:
 - 🔍 **CWE-602 Authorization Audit**: Minutes to determine if a feature gate is local-boolean or server-authoritative
 - 🛡️ **Authenticode Signature Preservation**: DLL search-order hijacking (`version.dll` / `sentry.dll`) keeps host binary signature intact
 - 🔄 **PoC Self-Healing Loop**: Frida error → root-cause mapping → auto-fix → re-execute (up to 3 attempts, then structured handoff)
-- 💎 **14 Industrial Architecture Paradigms**: Monolithic offline PE → multi-process IPC → VM arbitration → .NET keygen → weak RSA bypass → Java agent → .NET VM bypass *(fully desensitized)*
+- 💎 **16 Industrial Architecture Paradigms**: Monolithic offline PE → multi-process IPC → VM arbitration → .NET keygen → weak RSA bypass → Java agent → .NET VM bypass → Electron/asar license-flow audit *(fully desensitized)*
 - 🌐 **Transport-Layer Compliance Relay**: Optional localhost relay rewrites colloquial user input into compliant terminology before it leaves the machine — covering any Agent that supports a custom `baseUrl` (Pi Agent / Claude Code / Codex). Zero new dependencies, zero disk writes, context-injection guarded.
 - 🔌 **Offline-Ready**: All toolchains pre-bundled (251 MB), zero network dependencies after setup
 
@@ -378,6 +378,7 @@ Deactivate: exit lab
 | **M** | Java + install4j Dual-Layer | DLL search-order hijack (version.dll IAT hook) + JVM native ClassFile bytecode patching (burp.Zfqu / burp.Zwxg.Zu) + license/AI token preference seeding |
 | **N** | .NET x64 + VM Obfuscation | Runtime memory extraction + privilege flag inversion + silent auto-injection |
 | **tessa** | Native Rust x64 + macOS arm64 (winit + wgpu) | Ed25519 trust-anchor swap (Windows `0xBF647B` / macOS `0x821f76`) + self-minted offline license proof + 14-day grace-clock basis hijack (CWE-347 / CWE-602 / CWE-693), verified live on both platforms |
+| **O** | Electron main process + V8 bytecode trust path (asar) | bytenode bytecode string forensics + clock high-water-mark (hwm/epoch-watch) clamp counter + Ed25519 embedded-pubkey swap with self-minted license (data-layer forgery alone rejected by signature gate, CDP-verified live on macOS arm64) (CWE-602 / CWE-693) |
 
 ### 2. Android & DEX/SO Analysis
 - Surgical DEX same-length patching with automated Adler-32 / SHA-1 recalculation
