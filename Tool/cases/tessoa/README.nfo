@@ -16,8 +16,11 @@ __________________________________________________________________________
 
         Release .......: tessoa.v0.28.1.TrustAnchorSwap-INT0
         Target ........: tessoa v0.28.1  (Windows 桌面文件管理器, x64 PE32+)
-         Cross-ref .....: macOS arm64 实弹补丁见 Tool/audits/tessoa/macos/（Mach-O 0x821f76 等长替换 + ad-hoc 重签,
-                          同公钥同密钥对, 激活成功）
+         Cross-ref .....: macOS arm64 全链路见 Tool/cases/tessoa/src/workbench/
+                          (Mach-O 等长替换 + ad-hoc 重签 + TUI/CLI 一键流水线,
+                           详 src/README.md; 旧 tkinter GUI 已退役删除)
+         Anchor loc ....: src/autolocate.py -- 内容寻址自动求偏移（PE + Mach-O），
+                          不硬编码；升级只换 input path，详 docs §4.1
         Runtime .......: Rust native GUI (winit event loop + wgpu renderer)
                          PE32+ x64 / single-instance / NO WebView, NOT Tauri
         Protection ....: Ed25519-signed offline license proof
