@@ -1,4 +1,4 @@
-﻿# build.ps1 -- tessoa 案例归档：语法自检、CONFIG 就绪自检、完整性走查与校验和清单生成
+# build.ps1 -- tessoa 案例归档：语法自检、CONFIG 就绪自检、完整性走查与校验和清单生成
 #
 # Usage:
 #   powershell -ExecutionPolicy Bypass -File build.ps1
@@ -19,9 +19,9 @@ Write-Host "====================================================================
 $py = Join-Path $root 'src\keygen.py'
 $pyc = Join-Path $root 'src\__pycache__'
 if ((Get-Command python -ErrorAction SilentlyContinue) -and (Test-Path $py)) {
-    & python -m py_compile $py (Join-Path $root 'src\selftest.py') (Join-Path $root 'src\verify_package.py')
+    & python -m py_compile $py (Join-Path $root 'src\autolocate.py') (Join-Path $root 'src\selftest.py') (Join-Path $root 'src\verify_package.py')
     if ($LASTEXITCODE -ne 0) { throw 'python syntax error' }
-    Write-Host '  [OK] src\keygen.py + src\selftest.py + src\verify_package.py syntax' -ForegroundColor Green
+    Write-Host '  [OK] src\keygen.py + src\autolocate.py + src\selftest.py + src\verify_package.py syntax' -ForegroundColor Green
     Remove-Item $pyc -Recurse -Force -ErrorAction SilentlyContinue
 } else {
     Write-Host '  [SKIP] python not found, skipping syntax check' -ForegroundColor Yellow

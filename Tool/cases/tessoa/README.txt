@@ -73,6 +73,10 @@ PACKAGE CONTENTS:
   - src/keygen.py                  (trust-anchor swap + offline proof mint +
                                     grace-date control; CONFIG filled with Tessoa
                                      v0.28.1 measured real values)
+  - src/autolocate.py              (content-addressed anchor locator: DERIVES the
+                                    per-version offsets instead of hardcoding them,
+                                    so a vendor update no longer needs an edit;
+                                    PE + Mach-O; 13-check --selftest)
   - src/selftest.py                (runs the whole chain against a SYNTHETIC
                                     fixture: 13 assertions, no target needed)
   - src/verify_package.py          (checks the package against itself: manifest,
@@ -113,15 +117,23 @@ NOTE ON TARGET IDENTITY
     - the live MachineGuid / device fingerprint (derived at run time from the
       local registry; the measured pair 70bbb76527f36f1c is recorded in the
       report because it is the audit's own machine, not a secret)
-  src/keygen.py still refuses to run if its CONFIG constants no longer match
-  the sample (MD5 guard + unique-anchor check); use
+  src/keygen.py no longer needs its CONFIG addresses edited per version: the
+  default --addr-mode auto derives every offset from the sample's own content
+  via src/autolocate.py.  A differing sample MD5 is no longer fatal either --
+  pass --allow-unknown-sample to patch a new build.  --addr-mode pinned
+  reproduces the old hardcoded v0.28.1 behaviour for forensic comparison, and
+  --addr-mode verify re-derives then cross-checks against the snapshot.
+  The MD5 guard + unique-anchor check still apply; use
       python src/keygen.py --check-config
   to inspect readiness. It fails loudly rather than silently patching the
   wrong offset.
 
 BUILD / RUN
   python src/selftest.py                   # 13 checks against a synthetic fixture
+  python src/autolocate.py --selftest      # 13 checks, synthetic PE/Mach-O fixtures
   python -m pip install cryptography
+  python src/autolocate.py <sample.exe>    # derive the anchors for ANY build
+  python src/keygen.py --locate            # same, through keygen's resolver
   python src/keygen.py --check-config      # confirm CONFIG is ready (MD5/anchor)
   python src/keygen.py --mint              # patched exe + license.sig + license.ini
   python src/keygen.py --mint --sig-date-offset-days 3650
@@ -160,6 +172,11 @@ BUILD / RUN
      （v0.28.1：文件偏移 `0xBF647B`，VA `0x140BF7E7B`；9/30 基线 `0xB98733`/`0x140B99733`），
      四处引用但**只存一份**；用**等长**的攻击者公钥就地替换：不改重定位、不改节表、
      不破坏 PE 结构（64 字节中实际 60 字节不同）。
+     上述偏移是**快照**，厂商每次升级重排 `.rdata` 即全部漂移
+     （0.28.3 macOS 侧为 `0x83C16E`，与 x64 的 `0xBF647B` 毫不相干）。
+     故**不要硬编码偏移**：用 `python3 src/autolocate.py <exe>` 内容寻址自动求解，
+     它按"许可公钥与插件公钥成对相邻、许可在较低偏移"判别锚点，
+     换版本只换 input path，不改任何常量（详见 docs/reverse-engineering.md §4.1）。
      ⇒ 攻击者从此可以自签出结构合法、客户端判定可信的离线证明。
 
   2. 验签是**真执行且返回值参与授权状态写入**的：启动时 `[ed25519_verify]`

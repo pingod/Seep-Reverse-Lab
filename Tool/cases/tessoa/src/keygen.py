@@ -39,8 +39,14 @@ import uuid as uuidlib
 from email.utils import formatdate
 
 # ============================================================================
-# CONFIG —— 本机实测真实值（针对 Tessoa v0.28.1；换样本时更新对应项）
+# CONFIG —— 本机实测真实值
 # ============================================================================
+# 版本自适应：下列"地址级事实"是 **v0.28.1 的实测快照**，不再作为唯一真相。
+# 运行时默认走 autolocate.py 内容寻址自动求出新偏移（升级不再需要手改）；
+# 这里的字面值保留为 (a) 离线可读的档案记录，(b) --strict-addr 下的交叉校验基准。
+# 用 --addr-mode auto|pinned|verify 控制（见 main()）。
+ADDR_MODE_DEFAULT = "auto"
+
 BAKED_PUBKEY_HEX = "52dde2592618463044d4b602535494c2771dd08a5c3a2c0ca6804bb34e6f7167"  # v0.28.1 实测（@0xBF647B 唯一；与旧版公钥值相同）
 VENDOR_HOST = "api.keygen.sh"                  # 证明中的 host 头（来自 9/30 真实 sig）
 LICENSE_PATH = "/v1/accounts/tessoa/licenses/actions/validate-key"
@@ -50,7 +56,8 @@ LICENSEE = "Seep Reverse Lab"
 EDITION = "standard"
 QUOTA = 5
 
-# ---- 地址级事实（v0.28.1 实测，10/8 探针 probe2/4/5） --------------------
+# ---- 地址级事实（v0.28.1 实测，10/8 探针 probe2/4/5） ----------------------
+# 这些是 **v0.28.1 快照值**；实际生效值由 autolocate 覆盖（见 resolve_addrs）。
 PUBKEY_OFF = 0xBF647B            # v0.28.1 文件偏移（VA 0x140BF7E7B；旧版 0xB98733）
 PUBKEY_LEN = 64
 SIG_HEADER_VA = 0x140C07DB2      # 证明文件头模板，103 字节（file 0xC063B2）
@@ -83,6 +90,99 @@ APPDATA_DIR = os.path.join(os.environ.get("APPDATA", ""), PRODUCT_DIRNAME)
 INSTALL_DIR = os.path.join(os.environ.get("LOCALAPPDATA", ""), PRODUCT_DIRNAME)
 
 PLACEHOLDER_RE = re.compile(r"<[A-Za-z0-9_-]+>")
+
+# ---- 版本自适应地址解析 -----------------------------------------------------
+# 生效的地址级事实。由 resolve_addrs() 在读到样本后填充；
+# 模块级字面量仅作快照/回退，不再被 build_patched_exe() 直接引用。
+ADDR = {
+    "mode": ADDR_MODE_DEFAULT,
+    "pubkey_off": None, "pubkey_value": None,
+    "sig_header": None, "ini_header": None,   # 模板 **字节**（含结尾 \n）
+    "va_delta": None, "imagebase": None, "format": None,
+    "located": None,                          # autolocate.Located 对象
+}
+
+
+def _load_autolocate():
+    """导入同目录的 autolocate 模块（脚本方式运行时 sys.path[0] 即 src/）。"""
+    here = os.path.dirname(os.path.abspath(__file__))
+    if here not in sys.path:
+        sys.path.insert(0, here)
+    try:
+        import autolocate
+        return autolocate
+    except ImportError as e:
+        log("FATAL: 无法导入 autolocate.py（%s）" % e)
+        sys.exit(2)
+
+
+def resolve_addrs(data, mode=None):
+    """对样本做内容寻址，填充 ADDR。
+
+    mode:
+      auto   —— 默认。自动定位全部锚点（升级无需改任何常量）。
+      pinned —— 仅用本文件的快照常量（复现 v0.28.1 旧行为 / 取证对照）。
+      verify —— 自动定位 + 与快照常量交叉校验，不一致即报错（推荐用于回归）。
+    """
+    mode = mode or ADDR["mode"]
+    ADDR["mode"] = mode
+    A = _load_autolocate()
+
+    if mode == "pinned":
+        log("[addr] mode=pinned（使用 v0.28.1 快照常量，不做自动定位）")
+        ADDR.update({
+            "pubkey_off": PUBKEY_OFF,
+            "pubkey_value": BAKED_PUBKEY_HEX.encode(),
+            "sig_header": data[SIG_HEADER_VA - VA_DELTA:SIG_HEADER_VA - VA_DELTA + 103],
+            "ini_header": data[INI_HEADER_VA - VA_DELTA:INI_HEADER_VA - VA_DELTA + 55],
+            "va_delta": VA_DELTA, "imagebase": 0x140000000, "format": "pe",
+            "located": None,
+        })
+        return ADDR
+
+    L = A.locate(data)
+    ADDR["located"] = L
+    log(L.report())
+
+    if L.pubkey_off is None:
+        log("FATAL: 未能定位内置许可公钥锚点 —— 该样本的常量形状已变更，"
+            "需先跑探针确认（参见 docs/reverse-engineering.md）")
+        sys.exit(2)
+    if L.sig_header is None or L.ini_header is None:
+        log("FATAL: 未能定位许可头模板（sig/ini）—— 无法生成自签产物")
+        sys.exit(2)
+
+    ADDR.update({
+        "pubkey_off": L.pubkey_off,
+        "pubkey_value": L.pubkey_value,
+        "sig_header": L.sig_header,
+        "ini_header": L.ini_header,
+        "va_delta": L.va_delta,
+        "imagebase": L.imagebase,
+        "format": L.fmt,
+    })
+
+    if mode == "verify":
+        problems = []
+        if L.pubkey_off != PUBKEY_OFF:
+            problems.append("公钥偏移 0x%X != 快照 0x%X" % (L.pubkey_off, PUBKEY_OFF))
+        if L.sig_header_off != (SIG_HEADER_VA - VA_DELTA):
+            problems.append("签名头偏移 0x%X != 快照 0x%X"
+                            % (L.sig_header_off, SIG_HEADER_VA - VA_DELTA))
+        if L.ini_header_off != (INI_HEADER_VA - VA_DELTA):
+            problems.append("存储头偏移 0x%X != 快照 0x%X"
+                            % (L.ini_header_off, INI_HEADER_VA - VA_DELTA))
+        if L.va_delta is not None and L.va_delta != VA_DELTA:
+            problems.append("VA_DELTA 0x%X != 快照 0x%X" % (L.va_delta, VA_DELTA))
+        if problems:
+            log("FATAL: addr-mode=verify 交叉校验失败（样本版本与本文件快照不符）：")
+            for p in problems:
+                log("        - %s" % p)
+            log("        若这是**新版本**，属预期漂移：改用 --addr-mode auto 即可。")
+            sys.exit(4)
+        log("[addr] mode=verify：自动定位结果与快照常量完全一致 ✓")
+
+    return ADDR
 
 
 def log(*a):
@@ -168,38 +268,61 @@ def verify_ed25519(raw_pub, msg: bytes, sig: bytes) -> bool:
         return False
 
 
-def read_exe():
+def read_exe(allow_unknown=False):
     if not os.path.isfile(ORIG_EXE):
         log("FATAL: 缺少样本 %s" % ORIG_EXE)
         sys.exit(2)
     data = open(ORIG_EXE, "rb").read()
     md5 = hashlib.md5(data).hexdigest()
     if not PLACEHOLDER_RE.search(CANON_MD5) and md5 != CANON_MD5:
-        log("FATAL: 样本 MD5 不符：%s（期望 %s）—— 版本不同则地址级常量全部失效" % (md5, CANON_MD5))
-        sys.exit(2)
+        if not allow_unknown:
+            log("FATAL: 样本 MD5 不符：%s（期望 %s）" % (md5, CANON_MD5))
+            log("       若这是**新版本**样本，这是预期内的：地址级常量已由 autolocate")
+            log("       内容寻址自动重算，无需手改。用 --allow-unknown-sample 放行。")
+            sys.exit(2)
+        log("[sample] MD5 %s != 快照 %s —— 版本已变，转入自动定位模式" % (md5, CANON_MD5))
     return data
 
 
-def build_patched_exe(raw_pub):
-    old = BAKED_PUBKEY_HEX.encode()
-    data = bytearray(read_exe())
-    if data.find(old) != PUBKEY_OFF or data.find(old, PUBKEY_OFF + 1) != -1:
-        log("FATAL: 内置公钥锚点不在预期偏移或不唯一（样本版本不符？）")
+def build_patched_exe(raw_pub, data=None):
+    data = bytearray(read_exe() if data is None else data)
+    resolve_addrs(bytes(data))
+    off, old = ADDR["pubkey_off"], ADDR["pubkey_value"]
+    # 唯一性校验：锚点必须只出现一次，否则等长替换会打到错误的常量上
+    n = bytes(data).count(old)
+    if n != 1:
+        log("FATAL: 待替换公钥 %s… 在样本中出现 %d 次（期望 1 次）—— 无法安全等长替换"
+            % (old[:16].decode(), n))
         sys.exit(2)
     hexstr = raw_pub.hex().encode()
-    assert len(hexstr) == PUBKEY_LEN
-    data[PUBKEY_OFF:PUBKEY_OFF + PUBKEY_LEN] = hexstr
+    assert len(hexstr) == PUBKEY_LEN, "新公钥长度必须 = 64 字符"
+    data[off:off + PUBKEY_LEN] = hexstr
     os.makedirs(OUT, exist_ok=True)
     open(PATCHED_EXE, "wb").write(bytes(data))
     log("[patch] %s" % PATCHED_EXE)
-    log("[patch] 信任锚 %d 字节等长替换 -> %s" % (PUBKEY_LEN, hexstr.decode()))
+    log("[patch] 信任锚 @0x%X：%s… -> %s…（%d 字节等长替换，格式 %s）"
+        % (off, old[:16].decode(), hexstr[:16].decode(), PUBKEY_LEN, ADDR["format"]))
     return bytes(data)
 
 
-def header_bytes(va, size, tag):
-    d = read_exe()
-    off = va - VA_DELTA
-    h = d[off:off + size]
+def header_bytes(va, size, tag, data=None):
+    """按 VA 取文件头模板。
+
+    版本自适应：优先用 autolocate 已解出的模板字节（它直接按 'license proof' /
+    'license store' 标记定位，不依赖 VA_DELTA）；只在没有定位结果时退回 VA 换算。
+    """
+    if data is None:
+        data = read_exe()
+    if ADDR.get("located") is not None:
+        key = "sig_header" if tag == "proof" else "ini_header"
+        h = ADDR.get(key)
+        if h:
+            if len(h) != size:
+                log("FATAL: %s 模板长度 %d != 期望 %d（厂商模板已变更）" % (tag, len(h), size))
+                sys.exit(2)
+            return h
+    off = va - (ADDR["va_delta"] if ADDR.get("va_delta") is not None else VA_DELTA)
+    h = data[off:off + size]
     if not (h.startswith(b"# ") and h.endswith(b"\n")) or h[:-1].find(b"\x00") != -1:
         log("FATAL: %s 文件头模板取数异常（偏移 0x%X）" % (tag, off))
         sys.exit(2)
@@ -378,7 +501,17 @@ def main():
     ap.add_argument("--install-exe", action="store_true", dest="install_exe")
     ap.add_argument("--verify", action="store_true")
     ap.add_argument("--check-config", action="store_true", dest="check_config")
+    ap.add_argument("--addr-mode", default=ADDR_MODE_DEFAULT, dest="addr_mode",
+                    choices=("auto", "pinned", "verify"),
+                    help="auto=内容寻址自动适配任意版本（默认）；"
+                         "pinned=用 v0.28.1 快照常量（旧行为）；"
+                         "verify=自动定位并与快照交叉校验")
+    ap.add_argument("--allow-unknown-sample", action="store_true", dest="allow_unknown_sample",
+                    help="样本 MD5 不符快照时继续（新版本样本，配合 --addr-mode auto）")
+    ap.add_argument("--locate", action="store_true",
+                    help="只做内容寻址并打印定位报告，不改写任何文件")
     a = ap.parse_args()
+    ADDR["mode"] = a.addr_mode
 
     if a.check_config:
         bad = unfilled()
@@ -387,6 +520,14 @@ def main():
         else:
             log("[config] 全部就绪")
         return 0 if not bad else 1
+
+    if a.locate:
+        data = read_exe(allow_unknown=a.allow_unknown_sample)
+        try:
+            resolve_addrs(data)
+        except SystemExit:
+            return 3
+        return 0
 
     if a.newkey:
         get_keys(new=True)

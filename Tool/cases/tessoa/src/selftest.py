@@ -74,6 +74,10 @@ def main():
     k.PRODUCT_DIRNAME = "fakeapp"
     k.EXE_NAME = "fakeapp.exe"
     k.CANON_MD5 = hashlib.md5(bytes(buf)).hexdigest()
+    # 该 fixture 是**合成的裸缓冲区**，没有 PE/Mach-O 头，autolocate 无从解析容器
+    # （这本身是正确行为）。故此处显式锁定地址：单测的目标是"打补丁+签名+自校验"
+    # 的算术逻辑，不是容器解析——容器解析由 autolocate 自己的用例覆盖。
+    k.ADDR["mode"] = "pinned"
 
     print("  placeholder guard: unfilled() -> %s (expected empty)" % k.unfilled())
     chk("placeholder guard passes once CONFIG is filled with real values", not k.unfilled())

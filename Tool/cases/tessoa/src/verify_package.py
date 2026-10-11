@@ -40,6 +40,7 @@ ADDRS = [
 class R:
     def __init__(self):
         self.items = []
+        self.skips = []
 
     def chk(self, name, ok, detail=""):
         self.items.append((name, bool(ok), detail))
@@ -47,6 +48,15 @@ class R:
 
     def eq(self, name, got, want):
         return self.chk(name, got == want, "got %r want %r" % (got, want))
+
+    def skip(self, name, detail=""):
+        """环境缺失导致的"无法验证"——不计入失败，但必须显式登记并打印。
+
+        「没验证」不等于「验证通过」：跳过项在输出中单独成组，避免把环境
+        缺失误读为材料正确。
+        """
+        self.skips.append((name, detail))
+        return True
 
 
 def sha256(p):
@@ -124,10 +134,21 @@ def main():
     r.chk("SHA256SUMS hashes all match (no stale entry)", not bad, ", ".join(bad))
 
     # 3 - build.ps1 and restore.ps1 must be parseable
+    #
+    # 跨平台：本机常常没有 PowerShell（macOS/Linux 的 pwsh 需自行安装）。
+    # 之前硬编码 "powershell" 会直接抛 FileNotFoundError 把整个校验脚本打断。
+    # 现在的策略：找到 powershell/pwsh 就做语法解析；找不到就显式登记为
+    # SKIP（而非 FAIL）——"无法验证"与"验证不通过"是两回事，不能混为一谈。
     import subprocess
+    import shutil as _shutil
     import tempfile
+    ps_exe = next((e for e in ("pwsh", "powershell") if _shutil.which(e)), None)
     for ps in ("build.ps1", os.path.join("src", "restore.ps1")):
         ap = os.path.abspath(os.path.join(CASE, ps))
+        if ps_exe is None:
+            r.skip("%s parses" % ps,
+                   "未安装 PowerShell（pwsh/powershell 均不在 PATH）")
+            continue
         # pass the path via a UTF-8 script file: -Command with a non-ASCII
         # literal gets mangled by the console codepage
         fd, tmp = tempfile.mkstemp(suffix=".ps1")
@@ -139,8 +160,13 @@ def main():
                      "::ParseFile('%s', [ref]$null, [ref]$e)\n"
                      "if ($e) { $e | ForEach-Object { $_.ToString() }; exit 1 }\n"
                      % ap.replace("'", "''")).encode("utf-8-sig"))
-        p = subprocess.run(["powershell", "-NoProfile", "-ExecutionPolicy",
-                            "Bypass", "-File", tmp], capture_output=True, text=True)
+        try:
+            p = subprocess.run([ps_exe, "-NoProfile", "-ExecutionPolicy",
+                                "Bypass", "-File", tmp], capture_output=True, text=True)
+        except (OSError, subprocess.SubprocessError) as e:
+            r.skip("%s parses" % ps, "调用 %s 失败：%s" % (ps_exe, e))
+            os.unlink(tmp)
+            continue
         os.unlink(tmp)
         r.chk("%s parses" % ps, p.returncode == 0,
               (p.stdout or p.stderr).strip()[:200])
@@ -199,16 +225,32 @@ def main():
     r.eq("anchor slot length", k.PUBKEY_LEN, 64)
     r.eq("VA->file delta", k.VA_DELTA, 0x140000000 + 0x1A00)
     try:
-        from nacl.signing import VerifyKey
+        from nacl.signing import VerifyKey  # noqa: F401
         r.chk("nacl importable (needed by selftest)", True)
     except ImportError:
-        r.chk("nacl importable (needed by selftest)", False, "pip install pynacl")
+        r.skip("nacl importable (needed by selftest)",
+               "未安装 pynacl（pip install pynacl）——selftest 的第 1 项无法运行")
+
+    # 7 - autolocate 自带回归用例（合成 PE/Mach-O fixture，不依赖外部样本）
+    try:
+        import subprocess as _sp
+        _p = _sp.run([sys.executable, os.path.join(SRC, "autolocate.py"), "--selftest"],
+                     capture_output=True, text=True)
+        r.chk("autolocate selftest passes", _p.returncode == 0,
+              ( _p.stdout or _p.stderr).strip().splitlines()[-1][:200]
+              if (_p.stdout or _p.stderr) else "no output")
+    except Exception as e:                                  # pragma: no cover
+        r.chk("autolocate selftest passes", False, repr(e))
 
     fails = [i for i in r.items if not i[1]]
     for name, ok, detail in r.items:
         print("  [%s] %s%s" % ("OK  " if ok else "FAIL", name,
                                "" if ok or not detail else "  <- " + detail))
-    print("\n  %d/%d package checks passed" % (len(r.items) - len(fails), len(r.items)))
+    for name, detail in r.skips:
+        print("  [SKIP] %s%s" % (name, "" if not detail else "  <- " + detail))
+    print("\n  %d/%d package checks passed%s"
+          % (len(r.items) - len(fails), len(r.items),
+             "" if not r.skips else "，%d 项因环境缺失跳过（非通过）" % len(r.skips)))
     return 1 if fails else 0
 
 
