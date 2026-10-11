@@ -221,8 +221,10 @@ def cmd_restore(a) -> int:
 
 def cmd_tui(a) -> int:
     from .tui import run as tui_run          # 延迟导入：非 TTY 场景不必碰 curses
-    return tui_run(binary=a.binary, out_dir=getattr(a, "out_dir", None),
-                   data_dir=a.data_dir, backup_dir=a.backup_dir)
+    return tui_run(binary=getattr(a, "binary", None),
+                   out_dir=getattr(a, "out_dir", None),
+                   data_dir=getattr(a, "data_dir", None),
+                   backup_dir=getattr(a, "backup_dir", None))
 
 
 # --------------------------------------------------------------------------
