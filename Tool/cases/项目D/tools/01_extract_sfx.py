@@ -6,13 +6,10 @@ import zlib
 import struct
 import re
 import os
-# --- 路径解析（相对本脚本，便于案例库移植）---
-_HERE   = os.path.dirname(os.path.abspath(__file__))
-BASE    = os.path.dirname(_HERE)                  # 案例根目录
-SAMPLES = os.path.join(BASE, "samples")
+BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-SRC = os.path.join(BASE, "idman643build11.exe")
-OUT = os.path.join(SAMPLES, "extracted")
+SRC = BASE + r"\idman643build11.exe"
+OUT = BASE + r"\samples\extracted"
 OV = 0x17400
 
 os.makedirs(OUT, exist_ok=True)

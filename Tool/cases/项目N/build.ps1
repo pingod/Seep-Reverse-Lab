@@ -1,4 +1,4 @@
-# build.ps1 -- Project N case packaging, redaction scan and integrity check
+﻿# build.ps1 -- Project N case packaging, redaction scan and integrity check
 # NOTE: kept ASCII-only on purpose (PowerShell 5.1 parses BOM-less UTF-8 as GBK).
 $ErrorActionPreference = 'Stop'
 

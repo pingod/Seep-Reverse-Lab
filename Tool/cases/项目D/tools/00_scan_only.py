@@ -2,13 +2,10 @@
 import json
 import sys
 import os
-# --- 路径解析（相对本脚本，便于案例库移植）---
-_HERE   = os.path.dirname(os.path.abspath(__file__))
-BASE    = os.path.dirname(_HERE)                  # 案例根目录
-SAMPLES = os.path.join(BASE, "samples")
+BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 TARGET = sys.argv[1] if len(sys.argv) > 1 else r"C:\Program Files (x86)\项目D\项目D.exe"
-TABLE = os.path.join(SAMPLES, "final_table.json")
+TABLE = BASE + r"\samples\final_table.json"
 
 data = open(TARGET, 'rb').read()
 table = json.load(open(TABLE, encoding='utf-8'))

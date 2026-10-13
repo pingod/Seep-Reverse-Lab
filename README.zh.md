@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/angusdevgo/seep-reverse-lab"><img src="https://img.shields.io/badge/Release-v1.4.0-brightgreen.svg?style=for-the-badge&logo=github" alt="Release"></a>
+  <a href="https://github.com/angusdevgo/seep-reverse-lab"><img src="https://img.shields.io/badge/Release-v1.6.0-brightgreen.svg?style=for-the-badge&logo=github" alt="Release"></a>
   <a href="https://github.com/angusdevgo/seep-reverse-lab/blob/main/LICENSE"><img src="https://img.shields.io/badge/License-GPL--3.0-blue.svg?style=for-the-badge" alt="License"></a>
   <img src="https://img.shields.io/badge/Platform-Windows%20%7C%20Android%20%7C%20Linux-0078D6?style=for-the-badge&logo=windows" alt="Platform">
   <img src="https://img.shields.io/badge/Architecture-x86%20%7C%20x64%20%7C%20ARM64-orange?style=for-the-badge" alt="Architecture">
@@ -17,8 +17,10 @@
 
 <p align="center">
   <img src="https://img.shields.io/badge/MCP%20工具-23%20已集成-purple?style=for-the-badge&logo=fastapi" alt="MCP Tools">
+  <img src="https://img.shields.io/badge/健康体检-51%2F51%20全绿通过-brightgreen?style=for-the-badge&logo=checkmarx" alt="Verifier">
   <img src="https://img.shields.io/badge/实战知识库-289%20篇战术笔记-teal?style=for-the-badge" alt="Knowledge Base">
-  <img src="https://img.shields.io/badge/MANUAL%20SOP-5%20份专项手册-red?style=for-the-badge" alt="MANUAL SOPs">
+  <img src="https://img.shields.io/badge/脱敏范式-14%20大案例%20(A~N)-blue?style=for-the-badge" alt="Paradigms">
+  <img src="https://img.shields.io/badge/MANUAL%20SOP-9%20份专项手册-red?style=for-the-badge" alt="MANUAL SOPs">
   <a href="https://linux.do/"><img src="https://img.shields.io/badge/社区-LINUX%20DO-23272A?style=for-the-badge&logo=discourse" alt="LINUX DO"></a>
 </p>
 
@@ -113,7 +115,7 @@
 ## ⚡ 30 秒感受一下
 
 <p align="center">
-  <img src="docs/images/agent-workflow.png" alt="Seep 智能体逆向工作流实录" width="850">
+  <img src="docs/images/agent-workflow.png" alt="Seep 智能体全自动逆向与决策链路实录" width="880">
 </p>
 
 部署完成后，直接在 Agent 对话框发一句大白话：
@@ -142,7 +144,9 @@ Agent 自主完成：
 - 🛡️ **Authenticode 数字签名保全**：对具备数字签名的 Windows PE，通过代理 DLL（`version.dll`）劫持在内存打桩，宿主签名完好
 - 🔄 **PoC 自愈循环**：Frida 报错 → 根因映射 → 自动修正代码 → 重跑（最多 3 次，超限后结构化移交人工）
 - 💎 **15 大工业级脱敏范式**：单进程离线 → 多进程 IPC → VM 集中判定 → .NET 算号 → 弱模 RSA 旁路 → Java 动态插桩 → .NET VM 逆向，全覆盖
-- 🌐 **链路层合规转译中继**：可选的本机回环中继，在请求离开本机前把口语平滑转译为合规术语，覆盖任意支持自定义 `baseUrl` 的 Agent（Pi Agent / Claude Code / Codex）。零新增依赖、零落盘、带上下文注入守卫。
+- 🌐 **链路层合规转译中继与自动重试**：纯标准库实现的本地中继，支持流式拒答自动重试级联（`S1 评审清单` → `S2 架构走查` → `S3 英文重塑`），100% 保留目标参数不漂移，84 项单元测试全绿
+- ⚡ **DeepSeek Harness (DSH) 秒级自愈套件**：解决官方与插件在 Windows 上的扫描超时与端口冲突，4 秒极速冷启动，自动提取 Token URL 与 MCP 在线核验 (`start-dsh.ps1` / `stop-dsh.ps1`)
+- 🛡️ **实测抗拒答综合防线**：Gemini-Safe 提示词语义重塑（`gemini-safe.flag`，377 token 拒答 → 3300 字深度分析）、L1 拦截器动态可观测日志（`l1-log.flag`）、底座级 `BLOCK_NONE` 注入
 - 🔌 **离线预置全量内置**：所有工具链物理打包（251 MB），部署后零外网依赖
 
 ---
@@ -202,13 +206,18 @@ Seep\ (251 MB)
 │   └── scripts\                   ← 工作流自动化脚本
 │       └── compliance-relay\      ← 🌐 链路层合规转译中继（纯标准库，三协议）
 │
-├── setup\                         ← 安装、修复与自检脚本集
-└── MANUAL\                        ← 5 份战术专项 SOP 手册
-    ├── PREREQUISITES.md           ← 环境预要求指南
-    ├── IDA-PRO.md                 ← IDA Pro 商业软件接入指南
+├── setup\                         ← 安装、修复、更新、卸载与校验脚本集
+└── MANUAL\                        ← 9 份战术专项 SOP 手册
+    ├── PREREQUISITES.md           ← 环境与依赖预要求指南
+    ├── IDA-PRO.md                 ← IDA Pro 商业软件接入指南（支持 idalib 原生与传统 stdio 双模式）
     ├── ANTI-DEBUG.md              ← 反调试绕过字典与代理 DLL 框架
     ├── UNPACKING.md               ← UPX/MPRESS/Themida/VMP 脱壳 SOP
-    └── POC-VALIDATION.md          ← Frida 自愈循环与 PoC 沙箱验证
+    ├── POC-VALIDATION.md          ← Frida 自愈循环与 PoC 沙箱验证
+    ├── DEPLOYMENT.md              ← 全景部署与多 Agent 集成指南
+    ├── DEPLOYMENT-CHECKLIST.md    ← 官方部署资产核验基准清单（51 项）
+    ├── CROSS-PLATFORM.md          ← 跨平台（Windows/Linux/macOS）运行与战术等价指南
+    ├── COMPLIANCE-RELAY.md        ← 链路层合规转译中继与防拒自动重试指南
+    └── MODEL-REFUSAL-MATRIX.md    ← 实测大模型拒答矩阵与提示词重塑研究
 ```
 
 </details>
@@ -306,7 +315,23 @@ powershell -ExecutionPolicy Bypass -File .\setup\update.ps1
 > ⚠️ **更新后务必完全重启 Agent 会话**，新 Skill 与扩展才会加载。
 > 各版本变更内容见 [CHANGELOG.md](CHANGELOG.md)。
 
-### 5. 部署完备性校验（8 大维度）
+### 5. 如何卸载
+
+只移除工作台自己装的东西 —— 你的模型凭据、会话记录、以及自行添加的 MCP 条目都不会被触碰。
+
+```powershell
+powershell -ExecutionPolicy Bypass -File ./setup/uninstall.ps1 -DryRun   # 先预览
+powershell -ExecutionPolicy Bypass -File ./setup/uninstall.ps1          # 再执行
+```
+```bash
+./setup/uninstall.sh --dry-run && ./setup/uninstall.sh
+```
+
+所有受影响文件会先整体备份到 `~/.pi/agent/backup-uninstall-<时间戳>/`，用 `-Restore <目录>` 可一键还原。详见 [MANUAL/DEPLOYMENT.md](MANUAL/DEPLOYMENT.md)。
+
+### 6. 部署完备性校验（9 大维度 51 项全绿）
+
+严格对照 `MANUAL/DEPLOYMENT-CHECKLIST.md` 官方基准核验：
 
 | 方式 | 操作 |
 |---|---|
@@ -315,7 +340,7 @@ powershell -ExecutionPolicy Bypass -File .\setup\update.ps1
 | Agent 对话框 | 发送 `check`（或 `检查` / `doctor`）— Agent 自动运行并内联输出报告 |
 
 <p align="center">
-  <img src="docs/images/verifier-check.png" alt="Seep 部署完备性体检全绿看板 (35 项全部通过)" width="850">
+  <img src="docs/images/verifier-check.png" alt="Seep 部署完备性体检全绿看板 (9 大维度 51 项全部通过)" width="880">
 </p>
 
 ---

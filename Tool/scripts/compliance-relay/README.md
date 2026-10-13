@@ -46,6 +46,87 @@ python relay.py
 
 ---
 
+## 拒答自动重试（Gemini 优化）★
+
+> 这是中继最有价值的能力之一。
+
+### 问题
+
+Gemini 对「命令式要求对具体目标执行攻击性分析」的请求会**静默拦截**：
+
+```json
+HTTP 200  {"choices": [], "usage": {"completion_tokens": 377}}
+```
+
+模型生成了 token，但服务端把内容丢弃 —— **不报错、不提示**，客户端只看到「没响应」。
+传统的异常处理完全捕获不到。
+
+### 实测依据（详见 `MANUAL/MODEL-REFUSAL-MATRIX.md`）
+
+| 手段 | 效果 |
+|---|---|
+| 加前缀 / 换术语（本中继原有的 31 条规则） | ❌ **全部无效** |
+| **改写句式**（命令式 → 评审清单式） | ✅ **有效**（377 tokens 被丢弃 → 3324 字回答） |
+| 分类器有随机性 | ⚠️ 同一句式重试可能就过了 |
+
+### 工作机制
+
+```
+客户端请求（原句）
+      │
+      ▼
+  [中继] 检测：是否「命令式攻击请求」+ 是否含具体目标？
+      │
+      ├─ 否 → 原样转发
+      └─ 是 → 生成候选请求体：
+               1. original              （原句）
+               2. S1-review-checklist    （评审清单式，实测通过）
+               3. S2-review-framed       （设计评审框架）
+               4. S3-review-en           （英文评审式）
+      │
+      ▼
+  逐个发送 → 检测响应是否被拦
+      │
+      ├─ 被拦 → 换下一个策略重发（客户端无感）
+      └─ 放行 → 返回结果
+```
+
+### 实测日志
+
+```
+[REWRITE] key=pi-CPAMP protocol=openai-completions path=/v1/chat/completions changed=1
+[REFUSED] key=pi-CPAMP strategy=original reason=refusal-wording -> retrying
+[RECOVER] key=pi-CPAMP strategy=S1-review-checklist (saved after 1 refusal(s))
+```
+
+客户端收到的是 **2611 字的完整回答**，全程不知道中间发生过重试。
+
+### 设计要点
+
+| 要点 | 说明 |
+|---|---|
+| **目标必保留** | 所有策略都保留用户指定的目标路径，绝不改写为「泛泛而谈」 |
+| **不误伤正常请求** | 不命中「命令式攻击请求」形态时**完全不改写** |
+| **不拖慢长回答** | 只缓冲到「可判定」为止（SSE 8KB / JSON 4MB）；超出上限即视为肯定没被拦，直接透传 |
+| **对客户端透明** | 客户端收到的就是最终结果，无需任何适配 |
+| **可关闭** | `relay-config.json` 中 `refusalRetry: false` 即恢复原始直通行为 |
+
+### 配置
+
+```json
+{
+  "refusalRetry": true,
+  "refusalRetryAttempts": 3
+}
+```
+
+| 字段 | 默认 | 说明 |
+|---|---|---|
+| `refusalRetry` | `true` | 是否启用拒答自动重试 |
+| `refusalRetryAttempts` | `3` | 最多尝试几种改写策略（1~5） |
+
+---
+
 ## 路由格式
 
 ```
@@ -92,13 +173,23 @@ http://127.0.0.1:<port>/r/<token>/<upstream-key>/<原始路径>
 单向提取。**TS 源文件是唯一真值源**，改规则请改 TS 后重新提取。
 
 ### `guard-prefixes.json`（手工维护）
-
 三协议各自的「上下文注入前缀白名单」。命中白名单的文本整条跳过转译，
 防止改写 Agent 自注入的环境/AGENTS.md/技能清单。
 
 ---
 
 ## 测试
+
+```bash
+python -m unittest discover -s tests -v
+```
+
+共 **84 项**测试：
+
+| 文件 | 覆盖 |
+|---|---|
+| `tests/test_relay.py`（44 项） | 规则提取、最长优先匹配、单趟不回扫、上下文守卫、三协议适配、路由与 token、零落盘、端到端转发 |
+| `tests/test_refusal.py`（40 项） | 形态识别、改写策略级联、非流式/流式拒答检测、三协议文本往返、**端到端重试恢复** |
 
 ```bash
 python -m unittest discover -s tests -v

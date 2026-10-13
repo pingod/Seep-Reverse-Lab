@@ -24,9 +24,55 @@
 
 | 层 | 载体 | 作用范围 | 机制 |
 |---|---|---|---|
-| **L1 底座级** | `before_provider_request` 拦截 | Gemini 系 | 注入 `safetySettings: BLOCK_NONE` |
+| **L1 底座级** | `before_provider_request` 拦截 | **仅 Gemini/Google 端点**（`google-generative-ai` / `google-vertex`） | 注入 `safetySettings: BLOCK_NONE`；非 Google 端点原样透传，可用 `PI_SAFETY_PAYLOAD=off` 关闭 |
 | **L2 插件级** | `pi.on("input")` + 上下文守卫 | Pi Agent | 口语 → 合规术语转译 |
-| **L3 链路级** | **compliance-relay 回环中继** | **任意 HTTP Agent** | **请求体离开本机前改写** |
+| **L3 链路级** | **compliance-relay 回环中继** | **任意 HTTP Agent** | **请求体离开本机前改写 + 拒答自动重试** |
+
+### L3 的拒答自动重试（最关键的一层）
+
+中继不仅做术语转译，还会**检测拒答并自动换写法重发**，对客户端完全透明。
+
+实测依据：
+
+| 手段 | 效果 |
+|---|---|
+| 加前缀 / 换术语 | ❌ **全部无效**（本中继原有 31 条规则对 Gemini 不起作用） |
+| **改写句式**（命令式 → 评审清单式） | ✅ **有效** |
+
+工作流程：
+
+```
+原句 → 检测「命令式攻击请求 + 含目标」
+         │
+         ├─ 否 → 原样转发
+         └─ 是 → 依次尝试：
+                  original → S1评审清单 → S2设计评审 → S3英文评审
+                  被拦就换下一个，放行即返回
+```
+
+**实测日志**：
+
+```
+[REFUSED] key=pi-CPAMP strategy=original reason=refusal-wording -> retrying
+[RECOVER] key=pi-CPAMP strategy=S1-review-checklist (saved after 1 refusal(s))
+```
+
+客户端收到 **2611 字完整回答**，全程无感。
+
+**配置**（`Tool/scripts/compliance-relay/relay-config.json`）：
+
+```json
+{ "refusalRetry": true, "refusalRetryAttempts": 3 }
+```
+
+| 字段 | 默认 | 说明 |
+|---|---|---|
+| `refusalRetry` | `true` | 是否启用拒答自动重试 |
+| `refusalRetryAttempts` | `3` | 最多尝试几种改写策略（1~5） |
+
+> 设计约束：所有策略**必保留用户指定的目标**（绝不漂移为泛泛而谈）；
+> 不命中形态时**完全不改写**；只缓冲到「可判定」为止（SSE 8KB / JSON 4MB），
+> 超出上限即视为肯定没被拦，直接透传，不拖慢长回答。
 
 三层互不冲突，可同时启用。L3 是兜底与广覆盖层。
 
@@ -195,6 +241,91 @@ Copy-Item "$env:USERPROFILE\.codex\config.toml" "$env:USERPROFILE\.codex\config.
 
 ## 六、 边界与已知限制
 
+### ⚠️ L1 只在「Google 原生接口」上生效
+
+这是最容易踩的认知陷阱，单独说明。
+
+| 链路 | 请求体形状 | `safetySettings` 是否生效 |
+|---|---|---|
+| pi 内置 `google` provider（`api=google-generative-ai`） | `contents` | ✅ **生效** |
+| Google Vertex（`api=google-vertex`） | `contents` | ✅ **生效** |
+| **OpenAI 兼容中转**（`api=openai-completions`） | `messages` | ❌ **静默无效** |
+
+原因：`safetySettings` 是 **Google `generateContent` 原生 API 的私有字段**。
+走 OpenAI 兼容端点时，payload 里是 `messages`，中转**不认这个字段，会直接丢弃** ——
+不报错、不告警，**注入静默失效**。
+
+> 📌 **典型误判**：provider 名字里带 `gemini`，但 `api` 是 `openai-completions`（例如各种
+> `https://xxx/v1` 中转）。此时 L1 **看起来在工作，实际什么都没做**。
+
+### 打开 L1 可观测日志（推荐）
+
+为了避免上述盲区，扩展现在会把每次判定写进日志。**两种开关，任一满足即开启：**
+
+**方式 A：环境变量**（需重启 pi 生效）
+
+```bash
+# Windows PowerShell
+$env:PI_SAFETY_LOG="1"
+# Linux / macOS
+export PI_SAFETY_LOG=1
+```
+
+**方式 B：标记文件**（**无需重启**，每次请求现读现判）
+
+```powershell
+# 开启
+New-Item -ItemType File -Force "$env:USERPROFILE\.pi\agent\l1-log.flag"
+# 关闭
+Remove-Item "$env:USERPROFILE\.pi\agent\l1-log.flag"
+```
+```bash
+# 开启
+touch ~/.pi/agent/l1-log.flag
+# 关闭
+rm ~/.pi/agent/l1-log.flag
+```
+
+> 标记文件里写入一个绝对路径，即可把日志输出到自定义位置。
+
+默认写入 `~/.pi/agent/logs/l1-safety.log`，超过 512KB 自动截断。
+
+日志格式：
+
+```
+时间戳  <判定>  provider=<名字>  api=<标识>  model=<模型>  shape=<形状>
+```
+
+| 判定 | 含义 |
+|---|---|
+| `INJECT` | 已注入 `BLOCK_NONE`，**这次真的生效了** |
+| `SKIP` | 非 Google 端点，原样透传（正确行为，避免 400） |
+| `SKIP-INEFFECTIVE` | ⚠️ **名字像 Gemini 但走 OpenAI 格式** —— 注入必然无效，请改用 L2 / L3 |
+
+### 独立验证工具
+
+想知道 `BLOCK_NONE` 在您当前的 Gemini 模型上**还剩多少效力**，直接跑：
+
+```bash
+python Tool/scripts/check-gemini-safety.py
+python Tool/scripts/check-gemini-safety.py --list-models
+python Tool/scripts/check-gemini-safety.py --model gemini-2.5-flash
+```
+
+它会用**同一个提示词**分别以「不注入 / 注入 `BLOCK_NONE`」请求 Google 原生接口，
+对比 `finishReason` 与是否返回正文，给出三种明确结论：
+
+| 结论 | 含义 | 下一步 |
+|---|---|---|
+| ✅ **有效** | 原本被拦的请求，注入后成功获得回答 | 继续依赖 L1 |
+| ℹ️ **无法区分** | 两者都能回答，该提示词未触发过滤 | 换一个确实会被拦的提示词重测 |
+| ❌ **无效** | 注入后依然被拦 | Google 已收紧该类别的控制，**改用 L2 / L3** |
+
+> 密钥仅从环境变量 `GEMINI_API_KEY` 读取，**绝不打印、绝不落盘**。
+> 获取地址：https://aistudio.google.com/apikey
+
+### 其他已知限制
+
 | 限制 | 说明 |
 |---|---|
 | **仅覆盖支持自定义 `baseUrl` 的客户端** | 硬编码端点的官方登录流程无法接入 |
@@ -216,6 +347,7 @@ Copy-Item "$env:USERPROFILE\.codex\config.toml" "$env:USERPROFILE\.codex\config.
 | 请求成功但未改写 | 未开启 Lab Mode | 在 Agent 中发送 `lab：`，或用 `--force-on` 验证 |
 | 日志显示 `changed=0` | 文本未命中规则，或命中守卫白名单 | 用 `--verbose` 查看是否被识别为透传 |
 | 端口被占用 | 17890 已被其他进程占用 | `python relay.py --port 17891` |
+| 返回 `400 UNKNOWN_FIELD`（`未知请求字段：safetySettings` / `config`） | L1 把 Google 私有字段注入到了 OpenAI 兼容网关 | 更新工作台（旧版扩展无端点门控）；临时可用 `PI_SAFETY_PAYLOAD=off` 关闭 L1 |
 
 ---
 

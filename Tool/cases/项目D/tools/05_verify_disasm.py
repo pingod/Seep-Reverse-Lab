@@ -2,13 +2,10 @@
 import numpy as np
 from capstone import Cs, CS_ARCH_X86, CS_MODE_32, CS_OPT_SYNTAX_INTEL
 import os
-# --- 路径解析（相对本脚本，便于案例库移植）---
-_HERE   = os.path.dirname(os.path.abspath(__file__))
-BASE    = os.path.dirname(_HERE)                  # 案例根目录
-SAMPLES = os.path.join(BASE, "samples")
+BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 B10 = r"C:\Program Files (x86)\项目D\项目D.exe.BAK"
-B11 = os.path.join(SAMPLES, "项目D_643b11_original.exe")
+B11 = BASE + r"\samples\项目D_643b11_original.exe"
 b10 = open(B10, 'rb').read()
 b11 = open(B11, 'rb').read()
 A11 = np.frombuffer(b11, dtype=np.uint8)

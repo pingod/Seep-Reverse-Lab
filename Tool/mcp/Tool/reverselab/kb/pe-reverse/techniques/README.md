@@ -56,7 +56,7 @@ Windows PE/二进制逆向技术库。覆盖 triage、静态/动态分析、脱�
 - [`09-av-evasion/01-ai-powered-evasion.md`](09-av-evasion/01-ai-powered-evasion.md) — AI 驱动免杀：Shellcode 处理 + Loader 编写
 
 
-### 10-license-keygen — 许可证与 keygen（9）
+### 10-license-keygen — 许可证与 keygen（10）
 
 - [`10-license-keygen/01-license-mechanism-classification.md`](10-license-keygen/01-license-mechanism-classification.md) — 许可证机制分类与攻击路径选择
 - [`10-license-keygen/02-validation-function-location.md`](10-license-keygen/02-validation-function-location.md) — 许可证校验函数定位
@@ -67,6 +67,7 @@ Windows PE/二进制逆向技术库。覆盖 triage、静态/动态分析、脱�
 - [`10-license-keygen/07-self-referencing-signature-convergence.md`](10-license-keygen/07-self-referencing-signature-convergence.md) — 自引用签名嵌入与单步迭代收敛
 - [`10-license-keygen/08-cross-version-aob-migration.md`](10-license-keygen/08-cross-version-aob-migration.md) — 跨版本 AOB 特征码迁移与双态修补
 - [`10-license-keygen/09-runtime-callstack-locating.md`](10-license-keygen/09-runtime-callstack-locating.md) — 运行时调用栈定位法（静态 xref 断裂时的破局）
+- [`10-license-keygen/10-multiversion-signature-narrowing.md`](10-license-keygen/10-multiversion-signature-narrowing.md) — 多版本特征码收窄与数据段填充漂移陷阱
 
 ## 文档质量基线
 

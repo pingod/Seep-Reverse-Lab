@@ -46,6 +46,24 @@ powershell -ExecutionPolicy Bypass -File .\setup\update.ps1
 > **不要**让用户重新克隆仓库或手动拷贝文件。
 > 完成后必须提醒用户：**完全重启 Agent 会话**，然后发 `lab：` 继续开工。
 
+### 1c. 卸载
+若用户说 **“卸载工作台”**、**“怎么彻底删除”**、**“不想要了怎么清理”**，Agent 必须执行：
+
+**Windows**：
+```powershell
+powershell -ExecutionPolicy Bypass -File .\setup\uninstall.ps1
+```
+
+**Linux / macOS**：
+```bash
+./setup/uninstall.sh
+```
+
+> 卸载原则：**只移除工作台自己装的东西，绝不碰用户数据**。
+> `models.json` / `auth.json` / 用户自装的 Skill 与 MCP 条目全部保留。
+> 建议先加 `-DryRun`（`--dry-run`）让用户预览。
+> 卸载前会自动备份到 `~/.pi/agent/backup-uninstall-<时间戳>/`，可用 `-Restore <目录>` 还原。
+
 ### 2. 自动化校验与输出规范（★ 强制执行官方基准校对）
 - **部署完成后，Agent 必须主动执行详细校对**，严禁在未做验证前直接向用户声称“部署完成”；
 - **当用户在任何时候要求校验**（例如发送 `check`、`doctor`、`检查环境`、`帮我校验一下安装是否完整`）时，Agent 必须立即执行：

@@ -4,11 +4,8 @@
 """
 import json
 import os
-# --- 路径解析（相对本脚本，便于案例库移植）---
-_HERE   = os.path.dirname(os.path.abspath(__file__))
-BASE    = os.path.dirname(_HERE)                  # 案例根目录
-SAMPLES = os.path.join(BASE, "samples")
 
+BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SAMPLES = os.path.join(BASE, "samples")
 
 # 参与生成的全部版本样本

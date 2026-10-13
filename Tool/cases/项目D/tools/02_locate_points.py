@@ -2,13 +2,10 @@
 import numpy as np
 import json
 import os
-# --- 路径解析（相对本脚本，便于案例库移植）---
-_HERE   = os.path.dirname(os.path.abspath(__file__))
-BASE    = os.path.dirname(_HERE)                  # 案例根目录
-SAMPLES = os.path.join(BASE, "samples")
+BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 B10 = r"C:\Program Files (x86)\项目D\项目D.exe.BAK"
-B11 = os.path.join(SAMPLES, "项目D_643b11_original.exe")
+B11 = BASE + r"\samples\项目D_643b11_original.exe"
 
 b10 = open(B10, 'rb').read()
 b11 = open(B11, 'rb').read()
@@ -83,5 +80,5 @@ for name, o10, exp_hex, pat_hex in POINTS:
 print("=" * 116)
 print()
 print("字节完全匹配: %d / %d" % (sum(1 for x in out if x["ok"]), len(POINTS)))
-json.dump(out, open(os.path.join(SAMPLES, "hamming_result.json"), 'w',
+json.dump(out, open(BASE + r"\samples\hamming_result.json", 'w',
                     encoding='utf-8'), ensure_ascii=False, indent=2)

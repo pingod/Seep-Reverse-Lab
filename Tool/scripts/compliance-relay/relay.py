@@ -36,6 +36,8 @@ from http.client import HTTPConnection, HTTPSConnection
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlsplit
 
+import refusal as refusal_mod
+
 HERE = os.path.dirname(os.path.abspath(__file__))
 RULES_FILE = os.path.join(HERE, "sensitive-rules.json")
 GUARDS_FILE = os.path.join(HERE, "guard-prefixes.json")
@@ -65,6 +67,12 @@ HOP_BY_HOP = {
 REQUEST_HEADER_DROP = {"host", "content-length", "accept-encoding"}
 
 CHUNK_SIZE = 8192
+
+# 拒答探测缓冲上限：
+#   · 拒答响应极小（空 choices 约 200B，空流不足 1KB），完全落在上限内
+#   · 一旦超出上限就说明肯定不是拒答，直接透传，避免拖慢正常长回答
+SSE_PEEK_CAP = 8192
+JSON_BUFFER_CAP = 4 * 1024 * 1024
 
 
 # =============================================================================
@@ -349,6 +357,10 @@ def load_or_init_config(port: int | None) -> dict:
     cfg.setdefault("schema", 1)
     cfg.setdefault("port", DEFAULT_PORT)
     cfg.setdefault("upstreams", {})
+    # 拒答重试：Gemini 会静默拦截（choices 为空），分类器又带随机性，
+    # 因此默认开启「检测到被拦 → 换一种写法重发」，对客户端透明。
+    cfg.setdefault("refusalRetry", True)
+    cfg.setdefault("refusalRetryAttempts", 3)
 
     with open(CONFIG_FILE, "w", encoding="utf-8", newline="\n") as fh:
         json.dump(cfg, fh, ensure_ascii=False, indent=2)
@@ -388,6 +400,12 @@ class RelayState:
         self.token = config["token"]
         self.upstreams = config.get("upstreams", {})
         self.verbose = False
+        self.refusal_retry = bool(config.get("refusalRetry", True))
+        try:
+            self.refusal_attempts = int(config.get("refusalRetryAttempts", 3))
+        except (TypeError, ValueError):
+            self.refusal_attempts = 3
+        self.refusal_attempts = max(1, min(self.refusal_attempts, 5))
 
 
 def _parse_route(raw_path: str) -> tuple[str, str, str] | None:
@@ -546,7 +564,6 @@ class RelayHandler(BaseHTTPRequestHandler):
                 continue
             headers[name] = value
         headers["Host"] = host
-        headers["Content-Length"] = str(len(new_body))
 
         if changed:
             print(
@@ -559,65 +576,232 @@ class RelayHandler(BaseHTTPRequestHandler):
                 flush=True,
             )
 
+        # 候选请求体：首个始终是原始（已过术语替换）的请求体，
+        # 后续为拒答重试用的改写版本。
+        candidates = self._build_candidates(protocol, new_body)
+
         conn_cls = HTTPSConnection if scheme == "https" else HTTPConnection
+        attempt = None
+        for idx, (label, body_bytes) in enumerate(candidates):
+            attempt = self._attempt(
+                conn_cls, method, host, port, target, headers, body_bytes
+            )
+            if attempt is None:
+                print("[ERROR  ] upstream unreachable", flush=True)
+                self._send_plain(502, "upstream error")
+                return
+
+            if not attempt["refused"]:
+                if idx > 0:
+                    print(
+                        f"[RECOVER] key={key} strategy={label} "
+                        f"(saved after {idx} refusal(s))",
+                        flush=True,
+                    )
+                break
+
+            if idx + 1 < len(candidates):
+                print(
+                    f"[REFUSED] key={key} strategy={label} "
+                    f"reason={attempt['reason']} -> retrying",
+                    flush=True,
+                )
+                self._close_attempt(attempt)
+                attempt = None
+                continue
+
+            print(
+                f"[REFUSED] key={key} strategy={label} "
+                f"reason={attempt['reason']} (no strategy left)",
+                flush=True,
+            )
+            break
+
+        if attempt is None:
+            self._send_plain(502, "no upstream response")
+            return
+
+        self._relay_response(attempt)
+
+    # ------------------------------------------------------- 拒答重试引擎
+    def _build_candidates(
+        self, protocol: str | None, new_body: bytes
+    ) -> list[tuple[str, bytes]]:
+        """构造候选请求体。不命中「命令式攻击请求」形态时只返回原始请求体。"""
+        base: list[tuple[str, bytes]] = [("original", new_body)]
+        if not self.state.refusal_retry or protocol is None or not new_body:
+            return base
+        try:
+            body = json.loads(new_body.decode("utf-8"))
+        except Exception:
+            return base
+        if not isinstance(body, dict):
+            return base
+        try:
+            text = refusal_mod.get_last_user_text(body, protocol)
+        except Exception:
+            return base
+        if not text or not refusal_mod.looks_like_attack_request(text):
+            return base
+
+        try:
+            rewrites = refusal_mod.build_candidates(
+                text, max_attempts=self.state.refusal_attempts
+            )
+        except Exception:
+            return base
+
+        seen = {text.strip()}
+        for name, new_text in rewrites:
+            if new_text.strip() in seen:
+                continue
+            seen.add(new_text.strip())
+            try:
+                clone = json.loads(new_body.decode("utf-8"))
+            except Exception:
+                break
+            if refusal_mod.set_last_user_text(clone, protocol, new_text):
+                base.append(
+                    (name, json.dumps(clone, ensure_ascii=False).encode("utf-8"))
+                )
+        return base
+
+    @staticmethod
+    def _close_attempt(attempt: dict) -> None:
+        for target in (attempt.get("resp"), attempt.get("conn")):
+            if target is None:
+                continue
+            try:
+                target.close()
+            except Exception:
+                pass
+
+    def _attempt(
+        self,
+        conn_cls,
+        method: str,
+        host: str,
+        port: int | None,
+        target: str,
+        headers: dict,
+        body_bytes: bytes,
+    ) -> dict | None:
+        """发送一次请求，缓冲到「可判定是否拒答」为止。"""
+        send_headers = dict(headers)
+        send_headers["Content-Length"] = str(len(body_bytes))
+
         conn = None
         try:
             conn = conn_cls(host, port, timeout=600)
-            conn.request(method, target, body=new_body, headers=headers)
+            conn.request(method, target, body=body_bytes, headers=send_headers)
             resp = conn.getresponse()
-        except Exception as exc:  # 上游不可达
+        except Exception:
             if conn is not None:
                 try:
                     conn.close()
                 except Exception:
                     pass
-            print(f"[ERROR  ] upstream unreachable: {type(exc).__name__}", flush=True)
-            self._send_plain(502, f"upstream error: {type(exc).__name__}")
-            return
+            return None
 
+        content_type = resp.getheader("Content-Type", "") or ""
+        is_sse = "event-stream" in content_type.lower()
+        cap = SSE_PEEK_CAP if is_sse else JSON_BUFFER_CAP
+
+        buf: list[bytes] = []
+        total = 0
+        while total < cap:
+            try:
+                chunk = resp.read1(CHUNK_SIZE)
+            except AttributeError:
+                chunk = resp.read(CHUNK_SIZE)
+            except Exception:
+                break
+            if not chunk:
+                break
+            buf.append(chunk)
+            total += len(chunk)
+
+        buffered = b"".join(buf)
+        truncated = total >= cap
+
+        if truncated:
+            refused, reason = False, ""
+        else:
+            try:
+                refused, reason = refusal_mod.detect_refusal(content_type, buffered)
+            except Exception:
+                refused, reason = False, ""
+
+        return {
+            "status": resp.status,
+            "headers": resp.getheaders(),
+            "content_type": content_type,
+            "buffered": buffered,
+            "truncated": truncated,
+            "refused": refused,
+            "reason": reason,
+            "conn": conn,
+            "resp": resp,
+        }
+
+    def _write_out(self, chunk: bytes, chunked: bool) -> None:
+        if chunked:
+            self.wfile.write(f"{len(chunk):X}\r\n".encode("ascii"))
+            self.wfile.write(chunk)
+            self.wfile.write(b"\r\n")
+        else:
+            self.wfile.write(chunk)
         try:
-            self.send_response(resp.status)
-            upstream_headers = resp.getheaders()
-            has_length = False
-            for name, value in upstream_headers:
+            self.wfile.flush()
+        except Exception:
+            pass
+
+    def _relay_response(self, attempt: dict) -> None:
+        """把缓冲结果（必要时接续透传剩余流）发回客户端。"""
+        try:
+            self.send_response(attempt["status"])
+            sent_length = False
+            for name, value in attempt["headers"]:
                 lowered = name.lower()
                 if lowered in HOP_BY_HOP:
                     continue
                 if lowered == "content-length":
-                    has_length = True
+                    if not attempt["truncated"]:
+                        self.send_header(
+                            "Content-Length", str(len(attempt["buffered"]))
+                        )
+                        sent_length = True
+                    continue
                 self.send_header(name, value)
 
-            chunked_out = False
-            if not has_length:
-                # 上游为流式（SSE）响应：自行使用 chunked 编码保持 HTTP/1.1 语义
+            chunked_out = attempt["truncated"]
+            if chunked_out:
                 self.send_header("Transfer-Encoding", "chunked")
-                chunked_out = True
+            elif not sent_length:
+                self.send_header("Content-Length", str(len(attempt["buffered"])))
             self.end_headers()
 
-            while True:
-                chunk = resp.read(CHUNK_SIZE)
-                if not chunk:
-                    break
-                if chunked_out:
-                    self.wfile.write(f"{len(chunk):X}\r\n".encode("ascii"))
-                    self.wfile.write(chunk)
-                    self.wfile.write(b"\r\n")
-                else:
-                    self.wfile.write(chunk)
-                try:
-                    self.wfile.flush()
-                except Exception:
-                    break
-            if chunked_out:
+            if attempt["buffered"]:
+                self._write_out(attempt["buffered"], chunked_out)
+
+            if attempt["truncated"]:
+                resp = attempt["resp"]
+                while True:
+                    try:
+                        chunk = resp.read1(CHUNK_SIZE)
+                    except AttributeError:
+                        chunk = resp.read(CHUNK_SIZE)
+                    except Exception:
+                        break
+                    if not chunk:
+                        break
+                    self._write_out(chunk, True)
                 self.wfile.write(b"0\r\n\r\n")
                 self.wfile.flush()
         except (BrokenPipeError, ConnectionResetError):
             pass
         finally:
-            try:
-                conn.close()
-            except Exception:
-                pass
+            self._close_attempt(attempt)
 
     # ---------------------------------------------------------------- 方法
     def do_POST(self) -> None:  # noqa: N802

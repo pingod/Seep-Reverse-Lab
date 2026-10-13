@@ -2,12 +2,9 @@
 import json
 import textwrap
 import os
-# --- 路径解析（相对本脚本，便于案例库移植）---
-_HERE   = os.path.dirname(os.path.abspath(__file__))
-BASE    = os.path.dirname(_HERE)                  # 案例根目录
-SAMPLES = os.path.join(BASE, "samples")
+BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-TABLE = json.load(open(os.path.join(SAMPLES, "final_table.json"), encoding='utf-8'))
+TABLE = json.load(open(BASE + r"\samples\final_table.json", encoding='utf-8'))
 
 def wrap_hex(h, indent):
     """把长 hex 串折成多行 C# 字符串拼接"""
@@ -38,7 +35,7 @@ for t in TABLE:
     lines.append('                %d, "%s", "%s"),' % (t["patchOffsetInSig"], t["expected"], t["patch"]))
 lines.append("        };")
 
-open(os.path.join(SAMPLES, "aob_table.cs"), 'w', encoding='utf-8').write('\n'.join(lines))
+open(BASE + r"\samples\aob_table.cs", 'w', encoding='utf-8').write('\n'.join(lines))
 print("生成 %d 条特征码" % len(TABLE))
 print("总行数 %d" % len(lines))
 print()

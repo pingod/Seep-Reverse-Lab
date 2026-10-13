@@ -1,3 +1,21 @@
+// ============================================================================
+//  项目D Pro Tool — 项目D 授权流白盒审计与二进制补丁工具
+//  Copyright (C) 2026  angusdevgo
+//
+//  This program is free software: you can redistribute it and/or modify
+//  it under the terms of the GNU General Public License as published by
+//  the Free Software Foundation, either version 3 of the License, or
+//  (at your option) any later version.
+//
+//  This program is distributed in the hope that it will be useful,
+//  but WITHOUT ANY WARRANTY; without even the implied warranty of
+//  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+//  GNU General Public License for more details.
+//
+//  You should have received a copy of the GNU General Public License
+//  along with this program.  If not, see <https://www.gnu.org/licenses/>.
+// ============================================================================
+
 // 最小驱动器：调用 AOB 引擎对指定文件打补丁（用于运行时验证）
 // 用法: QuickPatch.exe <源exe> <目标exe>
 using System;

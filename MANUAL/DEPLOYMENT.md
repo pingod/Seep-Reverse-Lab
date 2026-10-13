@@ -257,7 +257,77 @@ cd <你的工作台目录>
 
 ---
 
-## 五、 常见部署故障与排障速查表 (FAQ)
+## 五、 卸载与回滚 (How to Uninstall)
+
+> 卸载脚本遵循 **「只移除工作台自己装的东西，绝不碰你的数据」** 原则。
+
+### 1. 先预览（推荐）
+
+```powershell
+# Windows
+powershell -ExecutionPolicy Bypass -File .\setup\uninstall.ps1 -DryRun
+```
+```bash
+# Linux / macOS
+./setup/uninstall.sh --dry-run
+```
+
+### 2. 执行卸载
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\setup\uninstall.ps1
+```
+```bash
+./setup/uninstall.sh
+```
+
+### 3. 卸载范围 vs. 保护范围
+
+| 会被移除 | 永不触碰 |
+|---|---|
+| 工作台自带的 9 大技能 | `models.json` / `auth.json` |
+| 工作台写入的 `AGENTS.md` / `SYSTEM.md` | `sessions/` / `logs/` |
+| `extensions/*.ts` | **你自己添加的** Skill |
+| `mcp.json` 中的 `seep` / `js-reverse` / `playwright` | **你自己添加的** MCP 条目（如 `ida`、`x64dbg`） |
+| `settings.json` 中工作台加入的 12 个 packages | `settings.json` 的其他字段与你自装的包 |
+| `lab-mode.flag` | 你自己的 `backup-*` 备份目录 |
+
+> MCP 条目采取**外科手术式**判定：只有 `args` 确实指向工作台组件
+> （如 `seep_mcp_server.py`）时才认为归工作台所有，避免误删。
+
+### 4. 卸载参数
+
+| 参数 | 作用 |
+|---|---|
+| `-DryRun` / `--dry-run` | 只预览，不做任何修改 |
+| `-Yes` / `--yes` | 跳过交互确认 |
+| `-KeepSkills` / `--keep-skills` | 保留已安装的技能 |
+| `-KeepPrompts` / `--keep-prompts` | 保留提示词与扩展 |
+| `-KeepMcp` / `--keep-mcp` | 保留 `mcp.json` 中的工作台条目 |
+| `-KeepPackages` / `--keep-packages` | 保留 `settings.json` 中的工作台 packages |
+| `-KeepLabFlag` / `--keep-lab-flag` | 保留 `lab-mode.flag` |
+| `-Purge` / `--purge` | 同时清理历史 `backup-*` 与生成的配置 |
+
+### 5. 误删了怎么恢复
+
+卸载前会把所有受影响文件整体备份到 `~/.pi/agent/backup-uninstall-<时间戳>/`：
+
+```powershell
+powershell -File .\setup\uninstall.ps1 -Restore "$env:USERPROFILE\.pi\agent\backup-uninstall-20261011-120000"
+```
+```bash
+./setup/uninstall.sh --restore "$HOME/.pi/agent/backup-uninstall-20261011-120000"
+```
+
+### 6. 卸载后
+
+1. **完全重启 Agent 会话**，卸载才会生效；
+2. 工作台**本体目录不会被自动删除**（避免误删你放在里面的 `work/`、`project/` 等数据），
+   确认不再需要时再手动删除整个文件夹。
+
+---
+
+## 六、 常见部署故障与排障速查表 (FAQ)
 
 ### Q1: 运行 `check.ps1` 报错 `Running scripts is disabled on this system`？
 - **根因**：Windows PowerShell 默认的执行策略（ExecutionPolicy）为 `Restricted`。

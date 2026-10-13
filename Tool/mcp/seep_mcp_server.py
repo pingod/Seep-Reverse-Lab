@@ -12,6 +12,7 @@ import json
 import re
 import glob
 import shutil
+import signal
 import zipfile
 import subprocess
 from pathlib import Path
@@ -1301,8 +1302,26 @@ def main():
             sys.stdin.reconfigure(encoding="utf-8")
         except Exception:
             pass
-    
-    server.run(transport="stdio")
+
+    # 父进程（dsh web / pi / codex）退出时，POSIX 下可能发 SIGTERM。
+    # 转成 SystemExit 走正常收尾，避免裸抛堆栈。
+    if hasattr(signal, "SIGTERM"):
+        try:
+            signal.signal(signal.SIGTERM, lambda *_a: sys.exit(0))
+        except (ValueError, OSError, AttributeError):
+            pass  # 非主线程或平台不支持时忽略
+
+    try:
+        server.run(transport="stdio")
+    except KeyboardInterrupt:
+        # Ctrl+C 会广播给整个控制台进程组：父进程与 MCP 子进程会同时收到。
+        # 这属于正常关闭流程，静默退出即可，不要让异常沿着
+        # anyio.run → asyncio.run → runpy.run_path 一路裸抛打印堆栈。
+        pass
+    except (BrokenPipeError, EOFError):
+        # 父进程先退出导致 stdin/stdout 关闭，同样属于正常收尾
+        pass
+
 
 if __name__ == "__main__":
     main()

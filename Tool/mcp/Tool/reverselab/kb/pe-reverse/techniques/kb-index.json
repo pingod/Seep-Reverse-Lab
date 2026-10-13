@@ -287,7 +287,19 @@
         "对话框定位",
         "假阳性排除",
         "对照组实验",
-        "弹窗触发条件"
+        "弹窗触发条件",
+        "多版本特征码收窄",
+        "共同稳定区",
+        "数据段填充漂移",
+        "填充漂移",
+        "对齐填充",
+        "常量池位移",
+        "模糊匹配误命中",
+        "近邻偏移",
+        "精确锚点定位",
+        "字符串锚定",
+        "零回归断言",
+        "汉明距离误判"
       ],
       "files": [
         "10-license-keygen/01-license-mechanism-classification.md",
@@ -298,7 +310,8 @@
         "10-license-keygen/06-cloud-license-frida-hook.md",
         "10-license-keygen/07-self-referencing-signature-convergence.md",
         "10-license-keygen/08-cross-version-aob-migration.md",
-        "10-license-keygen/09-runtime-callstack-locating.md"
+        "10-license-keygen/09-runtime-callstack-locating.md",
+        "10-license-keygen/10-multiversion-signature-narrowing.md"
       ],
       "priority": 9
     }

@@ -1,4 +1,4 @@
-﻿# CTF Reverse - Advanced Tools & Deobfuscation
+# CTF Reverse - Advanced Tools & Deobfuscation
 
 Advanced tooling for commercial packers/protectors, binary diffing, deobfuscation frameworks, emulation, and symbolic execution beyond angr.
 

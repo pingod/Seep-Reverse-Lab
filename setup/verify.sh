@@ -89,6 +89,7 @@ check_item "架构" "MCP专用运行时强约定 (Tool/mcp/Tool/)" test -d "$TOO
 # 1b. 版本与更新链路
 check_item "版本" "版本标识与变更日志 (VERSION + CHANGELOG.md)" test -f "$ROOT/VERSION" -a -f "$ROOT/CHANGELOG.md"
 check_item "版本" "已有用户一键更新脚本 (update.ps1 + update.sh)" test -f "$ROOT/setup/update.ps1" -a -f "$ROOT/setup/update.sh"
+check_item "版本" "一键卸载脚本 (uninstall.ps1 + uninstall.sh)" test -f "$ROOT/setup/uninstall.ps1" -a -f "$ROOT/setup/uninstall.sh"
 
 # 2. 知识库
 echo -e "\n${WHITE}[2/9] 📚 攻防实战知识库与战术模板 (KB)${RESET}"
@@ -110,6 +111,18 @@ check_item "Skill" "移动端逆向全链路 (apkseep 包含 45 篇规范与 56 
 check_item "Skill" "IDA Pro 自动化联动 (ida-reverse)" test -f "$TOOL_DIR/skill/ida-reverse/SKILL.md"
 check_item "Skill" "通用许可/卡密校验突破规范 (license-bypass)" test -f "$TOOL_DIR/skill/client-license-validation-bypass/SKILL.md"
 check_item "Skill" "独立战术安全技能包 (safe-skills 5组)" test -d "$TOOL_DIR/skill/safe-skills"
+
+# SKILL.md 带 UTF-8 BOM 时，frontmatter 解析器无法识别首行 `---`，技能会被静默跳过（Issue #6）
+test_skill_no_bom() {
+    local f first3
+    while IFS= read -r f; do
+        [ -z "$f" ] && continue
+        first3=$(head -c 3 "$f" 2>/dev/null | od -An -tx1 | tr -d ' \n')
+        [ "$first3" = "efbbbf" ] && return 1
+    done < <(find "$TOOL_DIR/skill" -name 'SKILL.md' 2>/dev/null)
+    return 0
+}
+check_item "Skill" "技能 SKILL.md 无 UTF-8 BOM（否则被 Agent 静默跳过）" test_skill_no_bom
 
 if [ -d "$AGENT_DIR" ]; then
     check_optn "部署" "Pi Agent 本地技能同步 (~/.pi/agent/skills/softseep)" "可运行 ./setup/install.sh 同步" test -f "$AGENT_DIR/skills/softseep/SKILL.md"

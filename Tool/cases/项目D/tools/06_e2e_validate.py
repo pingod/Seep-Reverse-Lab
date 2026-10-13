@@ -3,13 +3,10 @@ import json
 import struct
 import hashlib
 import os
-# --- 路径解析（相对本脚本，便于案例库移植）---
-_HERE   = os.path.dirname(os.path.abspath(__file__))
-BASE    = os.path.dirname(_HERE)                  # 案例根目录
-SAMPLES = os.path.join(BASE, "samples")
+BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-B11 = os.path.join(SAMPLES, "项目D_643b11_original.exe")
-TABLE = json.load(open(os.path.join(SAMPLES, "final_table.json"), encoding='utf-8'))
+B11 = BASE + r"\samples\项目D_643b11_original.exe"
+TABLE = json.load(open(BASE + r"\samples\final_table.json", encoding='utf-8'))
 
 orig = open(B11, 'rb').read()
 buf = bytearray(orig)
@@ -115,7 +112,7 @@ struct.pack_into('<I', buf, pi["checksum"], new)
 print("  PE 校验和: 0x%08X -> 0x%08X" % (old, new))
 
 # ---- 输出与校验 ----
-out = os.path.join(SAMPLES, "项目D_643b11_patched.exe")
+out = BASE + r"\samples\项目D_643b11_patched.exe"
 open(out, 'wb').write(bytes(buf))
 print()
 print("=== 产物 ===")

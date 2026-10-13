@@ -1,4 +1,22 @@
-﻿using System;
+﻿// ============================================================================
+//  项目D Pro Tool — 项目D 授权流白盒审计与二进制补丁工具
+//  Copyright (C) 2026  angusdevgo
+//
+//  This program is free software: you can redistribute it and/or modify
+//  it under the terms of the GNU General Public License as published by
+//  the Free Software Foundation, either version 3 of the License, or
+//  (at your option) any later version.
+//
+//  This program is distributed in the hope that it will be useful,
+//  but WITHOUT ANY WARRANTY; without even the implied warranty of
+//  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+//  GNU General Public License for more details.
+//
+//  You should have received a copy of the GNU General Public License
+//  along with this program.  If not, see <https://www.gnu.org/licenses/>.
+// ============================================================================
+
+using System;
 using System.IO;
 using System.Diagnostics;
 using System.Threading;
@@ -97,7 +115,7 @@ namespace IDM_Toolkit_Wpf
                     if (firstArg == "-help" || firstArg == "/help" || firstArg == "/?")
                     {
                         Console.WriteLine("支持命令行选项：");
-                        Console.WriteLine("  -patch                执行模式一：底层深度解锁（AOB 特征码扫描 14 处校验点修补与签名剥离）");
+                        Console.WriteLine("  -patch                执行模式一：底层深度解锁（AOB 特征码扫描 15 处校验点修补与签名剥离）");
                         Console.WriteLine("  -freeze               执行模式二：永久冻结试用期（Windows ACL 锁定时间戳与 CLSID）");
                         Console.WriteLine("  -register [name] [email] [serial]  执行模式三：个性化登记并联动解锁");
                         Console.WriteLine("  -restore              执行一键还原官方原版主程序与官方未注册配置");
@@ -2875,34 +2893,37 @@ namespace IDM_Toolkit_Wpf
     public static class NativeBinaryPatcher
     {
         // ===== 支持范围 =====
-        public const string SupportedVersions = "项目D 6.43 build 10 / build 11 (6.43.11.2) / build 11 (6.43.11.3)";
+        public const string SupportedVersions = "项目D 6.43 build 10 / build 11 (6.43.11.2) / build 11 (6.43.11.3) / build 12 (6.43.12.3) / build 15 (6.43.15.3)";
 
         // ===== AOB 特征码表 =====
-        // 经 项目D 6.43 build 10 / build 11 (6.43.11.2) / build 11 (6.43.11.3) 三版本交叉验证：
-        // 全部 14 个位点在三个版本的「原始态 / 已补丁态」中均为唯一命中。
+        // 经 项目D 6.43 build 10 / build 11 (6.43.11.2) / build 11 (6.43.11.3) /
+        //        build 12 (6.43.12.3) / build 15 (6.43.15.3) 五个版本交叉验证：
+        // 全部 14 个必需位点在五个版本的「原始态 / 已补丁态」中均为唯一命中；
+        // 第 15 个可选位点仅在 build 11.3 / 12.3 / 15.3 存在（那三个版本唯一命中），
+        // 在 build 10 / 11.2 上零命中，由 Optional 机制自动跳过。
+        //
+        // 特征码取自「五版本共同稳定区」——即只有在这五个版本中字节完全一致的
+        // 区域才被纳入特征码，从而天然排除编译器生成的重定位指针与版本相关常量。
         public static readonly AobPoint[] POINTS = new AobPoint[]
         {
             new AobPoint(
                 "授权分支检测 (test eax->xor eax)",
-                "4598506A006A008B0D04867800518B9544F5FFFF52FF150440690085C07508B301889D4FF5FFFF8B8544F5FFFF50FF15" +
-                "4840690084DB753789B554F5FFFF8D8D54F5FFFF518D5598526A006A00A104867800508B0DE86C780051FF1504406900" +
-                "85C00F851B010000C6854FF5FFFF018D8D50F5FFFFE8",
-                "4598506A006A008B0D04867800518B9544F5FFFF52FF150440690085C07508B301889D4FF5FFFF8B8544F5FFFF50FF15" +
-                "4840690084DB753789B554F5FFFF8D8D54F5FFFF518D5598526A006A00A104867800508B0DE86C780051FF1504406900" +
-                "33C00F851B010000C6854FF5FFFF018D8D50F5FFFFE8",
-                96, "85", "33"),
+                "690085C00F851B010000C6854FF5FFFF018D8D50F5FFFFE8",
+                "690033C00F851B010000C6854FF5FFFF018D8D50F5FFFFE8",
+                2, "85", "33"),
+
             new AobPoint(
                 "试用期最大值 (->mov eax,7FFFFFFF+nop)",
-                "660064A1000000005083EC70A19819780033C58985A8090000535657508D45F464A3000000008965F0894D8433DB895D" +
-                "D4895DFCA1DC9C7700F7D81BC083E00F83C00FA3E09C7700885DCF538D4DEC5153683F000F0053535368",
-                "660064A1000000005083EC70A19819780033C58985A8090000535657508D45F464A3000000008965F0894D8433DB895D" +
-                "D4895DFCA1DC9C7700F7D81BC0B8FFFFFF7F90A3E09C7700885DCF538D4DEC5153683F000F0053535368",
-                61, "83E00F83C00F", "B8FFFFFF7F90"),
+                "7700F7D81BC083E00F83C00FA3",
+                "7700F7D81BC0B8FFFFFF7F90A3",
+                6, "83E00F83C00F", "B8FFFFFF7F90"),
+
             new AobPoint(
                 "假序列号弹窗 A (jz->jmp)",
-                "030E0084C0742A807C2407007523C7442414FFFFFFFF8D4C2408E8",
-                "030E0084C0EB2A807C2407007523C7442414FFFFFFFF8D4C2408E8",
-                5, "74", "EB"),
+                "0E0084C0742A807C2407007523C7442414FFFFFFFF8D4C2408E8",
+                "0E0084C0EB2A807C2407007523C7442414FFFFFFFF8D4C2408E8",
+                4, "74", "EB"),
+
             new AobPoint(
                 "守护线程 A",
                 "1A0085FF750885ED750433C0EB05B8010000008B8C24F400000064890D00000000595F5E5D5B81C4EC000000C3CCCCCC" +
@@ -2910,76 +2931,76 @@ namespace IDM_Toolkit_Wpf
                 "1A0085FF750885ED750433C0EB05B8010000008B8C24F400000064890D00000000595F5E5D5B81C4EC000000C3CCCCCC" +
                 "C3FF68",
                 48, "6A", "C3"),
+
             new AobPoint(
                 "守护线程 B",
                 "1C0081C470010000C3CCCCCCCC6AFF68",
                 "1C0081C470010000C3CCCCCCCCC3FF68",
                 13, "6A", "C3"),
+
             new AobPoint(
                 "守护线程 C",
                 "1C0085F675928B4C241864890D00000000595F5E5D5B83C410C20400CCCCCCCCCCCCCCCCCCCCCCCC6AFF68",
                 "1C0085F675928B4C241864890D00000000595F5E5D5B83C410C20400CCCCCCCCCCCCCCCCCCCCCCCCC3FF68",
                 40, "6A", "C3"),
+
             new AobPoint(
                 "守护线程 D",
-                "76FFFF83C41083F80675198B0DB07378006A0068482B0000681101000051FF15C8476900B801000000C3CCCCCCCCCCCC" +
-                "CCCCCCCCCCCCCC6AFF68",
-                "76FFFF83C41083F80675198B0DB07378006A0068482B0000681101000051FF15C8476900B801000000C3CCCCCCCCCCCC" +
-                "CCCCCCCCCCCCCCC3FF68",
-                55, "6A", "C3"),
+                "6900B801000000C3CCCCCCCCCCCCCCCCCCCCCCCCCC6AFF68",
+                "6900B801000000C3CCCCCCCCCCCCCCCCCCCCCCCCCCC3FF68",
+                21, "6A", "C3"),
+
             new AobPoint(
                 "看门狗关联函数",
                 "1B0081C41C100000C3CCCC6AFF68",
                 "1B0081C41C100000C3CCCCC3FF68",
                 11, "6A", "C3"),
+
             new AobPoint(
                 "守护线程 E (push ebp->ret)",
                 "1B0081C4D0010000C3CCCCCCCCCCCCCCCCCC558BEC83E4F86AFF68",
                 "1B0081C4D0010000C3CCCCCCCCCCCCCCCCCCC38BEC83E4F86AFF68",
                 18, "55", "C3"),
+
             new AobPoint(
                 "守护线程 F",
-                "506C0089152CD97700C70530D9770005000000A334D97700A338D97700890D3CD97700A340D97700C7442410FFFFFFFF" +
-                "B890D877008B4C240864890D00000000595E83C40CC3CCCCCCCCCCCCCC6AFF68",
-                "506C0089152CD97700C70530D9770005000000A334D97700A338D97700890D3CD97700A340D97700C7442410FFFFFFFF" +
-                "B890D877008B4C240864890D00000000595E83C40CC3CCCCCCCCCCCCCCC3FF68",
-                77, "6A", "C3"),
+                "77008B4C240864890D00000000595E83C40CC3CCCCCCCCCCCCCC6AFF68",
+                "77008B4C240864890D00000000595E83C40CC3CCCCCCCCCCCCCCC3FF68",
+                26, "6A", "C3"),
+
             new AobPoint(
                 "过期强退逻辑 (0F85->90E9)",
-                "004DC685DD1B020056C685DF1B020000C7851CFDFFFF100000008D851CFDFFFF508D8D801B02005133FF57578D95D41B" +
-                "020052A1E86C780050FF150440690085C00F85F10100008D85801B02008D50018D6424008A084084C975F92BC283F802" +
-                "0F85D2010000E8",
-                "004DC685DD1B020056C685DF1B020000C7851CFDFFFF100000008D851CFDFFFF508D8D801B02005133FF57578D95D41B" +
-                "020052A1E86C780050FF150440690085C00F85F10100008D85801B02008D50018D6424008A084084C975F92BC283F802" +
-                "90E9D2010000E8",
-                96, "0F85", "90E9"),
+                "690085C00F85F10100008D85801B02008D50018D6424008A084084C975F92BC283F8020F85D2010000E8",
+                "690085C00F85F10100008D85801B02008D50018D6424008A084084C975F92BC283F80290E9D2010000E8",
+                35, "0F85", "90E9"),
+
             new AobPoint(
                 "联网验证标志位",
-                "BDFEFFB8010000009BE9D5000000B801000000A3807378009BE9C500000080BE94020000000F85CA92FFFF6A00687011" +
-                "01006A308BCEE8",
-                "BDFEFFB8010000009BE9D5000000B800000000A3807378009BE9C500000080BE94020000000F85CA92FFFF6A00687011" +
-                "01006A308BCEE8",
-                15, "01", "00"),
+                "FEFFB8010000009BE9D5000000B801000000A3",
+                "FEFFB8010000009BE9D5000000B800000000A3",
+                14, "01", "00"),
+
             new AobPoint(
                 "假序列号弹窗 B (jz->jmp)",
-                "D2030084C0742A807C2407007523C7442414FFFFFFFF8D4C2408E8",
-                "D2030084C0EB2A807C2407007523C7442414FFFFFFFF8D4C2408E8",
-                5, "74", "EB"),
+                "030084C0742A807C2407007523C7442414FFFFFFFF8D4C2408E8",
+                "030084C0EB2A807C2407007523C7442414FFFFFFFF8D4C2408E8",
+                4, "74", "EB"),
+
             new AobPoint(
                 "试用状态标志 + 天数限制常量",
-                "7200000000002E3F415643446F776E6C6F6164436F6D706F6E656E7473404000000001000000010000001E000000",
-                "7200000000002E3F415643446F776E6C6F6164436F6D706F6E656E747340400000000100000000000000FFFFFF7F",
-                38, "010000001E000000", "00000000FFFFFF7F"),
+                "00000001000000010000001E000000",
+                "0000000100000000000000FFFFFF7F",
+                7, "010000001E000000", "00000000FFFFFF7F"),
 
             // ── 可选位点：仅 项目D 6.43 build 11.3+ 新增的“Serial 缺失 → 弹注册对话框”对抗逻辑 ──
-            // build 11.3 新增：启动时若注册表不存在 Serial 值，则直接弹出注册对话框（资源 138）。
+            // build 11.3 / 12.3 / 15.3 中：启动时若注册表不存在 Serial 值，则直接弹出注册对话框（资源 138）。
             // 该分支在 b10 / 11.2 中仅作句柄清理，不会弹框，故本特征码在那两个版本上零命中，
             // 由 Optional 机制自动跳过。原始 `je` 改为 `jmp`，使流程永远走“Serial 已存在”路径。
             new AobPoint(
                 "注册对话框抑制 (Serial缺失分支, 可选)",
-                "8B0DE86C780051FF150440690085C0740C",
-                "8B0DE86C780051FF150440690085C0EB0C",
-                15, "74", "EB", true),
+                "690085C0740C8BCBE8",
+                "690085C0EB0C8BCBE8",
+                4, "74", "EB", true),
         };
 
         // 向后兼容：旧代码引用的 RulesCount

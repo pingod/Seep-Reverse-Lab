@@ -1,3 +1,7 @@
+<p align="right">
+  <strong>English</strong> | <a href="README.zh.md">简体中文</a>
+</p>
+
 <p align="center">
   <img src="app_icon.png" alt="项目D Pro Tool Logo" width="128" height="128">
 </p>
@@ -5,7 +9,7 @@
 <h1 align="center">项目D Pro Tool</h1>
 
 <p align="center">
-  <strong>多功能 项目D 原生 C# 激活与状态维护套件</strong>
+  <strong>Feature-Rich Native C# Activation & Lifecycle State Maintenance Toolkit for 项目D</strong>
 </p>
 
 <p align="center">
@@ -18,289 +22,308 @@
 </p>
 
 <p align="center">
-  <a href="#-项目特色">项目特色</a> •
-  <a href="#-功能全景">功能全景</a> •
-  <a href="#-核心实现原理">核心实现原理</a> •
-  <a href="#-快速开始">快速开始</a> •
-  <a href="#-命令行模式">命令行模式</a> •
-  <a href="#-验证版本与指纹">验证版本与指纹</a> •
-  <a href="#-构建指南">构建指南</a> •
-  <a href="#-免责声明">免责声明</a>
+  <a href="#-key-features">Key Features</a> •
+  <a href="#-functional-overview">Functional Overview</a> •
+  <a href="#-core-architecture--mechanisms">Core Mechanisms</a> •
+  <a href="#-quick-start">Quick Start</a> •
+  <a href="#-command-line-interface-cli">CLI Support</a> •
+  <a href="#-verified-versions--cryptographic-fingerprints">Verified Versions</a> •
+  <a href="#-project-structure">Project Structure</a> •
+  <a href="#-open-source-license">License</a> •
+  <a href="#-disclaimer">Disclaimer</a>
 </p>
 
 ---
 
-## 🌟 项目特色
+## 🌟 Key Features
 
-- 🚀 **零外部依赖，系统原生直驱**  
-  无需安装任何 .NET SDK、Visual Studio 或繁重依赖，仅使用 Windows 系统自带的 `csc.exe` 即可毫秒级编译，产物仅 200 KB 左右。
-- 🎨 **纯代码构建的精美 WPF 界面**  
-  零 XAML 文件，全代码手工构建高精度矢量界面，集成 Windows DWM 沉浸式暗黑标题栏，原生支持高分屏（High DPI）自适应渲染。
-- 🛡️ **严格的字节级安全防护机制**  
-  打补丁前严格比对目标机器上的 `Expected` 原始机器码，版本或指纹不符自动中断并安全回滚，杜绝改坏 `项目D.exe`。
-- 💾 **无损原子级安全备份**  
-  首次修补时自动建立 `项目D.exe.BAK` 原始母版备份，仅当备份不存在时创建，确保回滚点始终为官方最纯净原版。
-- ⚡ **多维度激活机制集成**  
-  集成「底层二进制修补」、「Windows ACL 永久冻结试用」与「个性化授权登记」三大主流策略，满足不同场景下的使用与测试需求。
+- 🚀 **Zero External Dependencies · Native Toolchain Execution**  
+  No heavyweight .NET SDK, Visual Studio, or runtime prerequisites required. Compiles within milliseconds using the built-in Windows native C# compiler (`csc.exe`), producing a standalone executable of approximately 240 KB.
+- 🎨 **Code-First Modern WPF Interface**  
+  Constructed entirely in pure C# code without any XAML overhead. Integrates native Windows Desktop Window Manager (DWM) immersive dark-mode titlebars and built-in Per-Monitor High-DPI dynamic scaling.
+- 🛡️ **Byte-Level Preflight Safety Gating**  
+  Validates both structural PE headers and redundant expected byte sequences prior to any modification. Aborts immediately with a zero-byte-written fail-closed guarantee upon any fingerprint or layout mismatch.
+- 💾 **Version-Aware Atomic Backup & Restoration**  
+  Automatically archives clean original binaries to `项目D.exe.BAK`. Inspects embedded version metadata to detect stale backups from past updates, preventing rollback version misalignment.
+- ⚡ **Multi-Paradigm Activation Strategies**  
+  Consolidates deep binary patching, Windows ACL registry evaluation freezing, and personalized identity registration into a single modular solution.
 
 ---
 
-## 📋 功能全景
+## 📋 Functional Overview
 
-### 1. 核心授权模式 (Core Modes)
+### 1. Core Operating Modes
 
-| 模式 | 运行机制 | 适用场景 |
+| Mode | Underlying Mechanism | Recommended Scenario |
 | :--- | :--- | :--- |
-| 🔥 **模式一：极速深度解锁** | AOB 特征码扫描定位 `项目D.exe` 底层 15 处 / 31 字节指令并修补（含 1 处版本专属可选位点），剥离数字签名，重算 PE 校验和，并写入终身授权登记信息。 | 追求彻底离线激活、解除所有限制的用户。 |
-| ❄️ **模式二：永久冻结试用期** | 通过 Windows ACL 精确锁定注册表 CLSID 键与时间戳，固定锁定 30 天试用；不修改任何二进制。 | 需要保持原版哈希、支持官方在线静默升级的用户。 |
-| 💎 **模式三：个性化授权登记** | 自定义登记姓名与邮箱（支持一键生成随机身份），自动写入系统注册表并联动底层解锁。 | 需要自定义个人专属软件授权展示界面的用户。 |
-| 🔄 **模式四：全量清理出厂重置** | 清理系统内 CLSID 试用标记、黑名单特征项及注册表残留，重置为刚安装时的纯净状态。 | 解决弹窗异常、状态混乱或准备重装测试。 |
-| ♻️ **一键还原官方原版** | 一键无缝从 `项目D.exe.BAK` 恢复原版主程序，并抹除注册项，还原为未注册评估状态。 | 快速回滚至初始状态。 |
+| 🔥 **Mode 1: Rapid Deep Unlock** | Scans and patches 15 instruction sites (31 bytes) in `项目D.exe` using AOB dual-state signatures (including 1 version-adaptive optional site), strips Authenticode certificates, recomputes the PE checksum, and writes permanent license metadata. | Complete offline entitlement with all functional and dialog restrictions removed. |
+| ❄️ **Mode 2: Permanent Trial Freeze** | Employs Windows Access Control Lists (ACLs) to write-protect 项目D's evaluation CLSID registry keys and timestamps at a fixed 30-day trial status without altering binary code. | Users requiring unaltered PE binary hashes and compatibility with silent official in-app updates. |
+| 💎 **Mode 3: Custom Identity Registration** | Injects custom user name and email credentials (with randomized identity generation) into the registry while coordinating underlying binary unlock hooks. | Customizing personalized registered ownership displays in the 项目D interface. |
+| 🔄 **Mode 4: Factory Reset & State Cleanup** | Purges evaluation CLSID registry markers, known blacklist records, telemetry flags, and leftover state, restoring 项目D to a clean post-installation state. | Resolving corrupted state, notification anomalies, or preparing for clean testing. |
+| ♻️ **One-Click Official Restore** | Restores the unpatched binary from `项目D.exe.BAK`, strips registration keys, and returns 项目D to an unactivated trial state. | Quick, zero-side-effect rollback to stock condition. |
 
-### 2. 高级安全与策略盾牌 (Security & Shields)
+### 2. Security Shields & Maintenance Utilities
 
-- **🛡️ Hosts 验证盾牌**：智能向系统 Hosts 文件添加/移除 `tonec.com`、`registeridm.com` 等 8 组关键验证服务器的 `127.0.0.1` 回环映射，从网络层截断黑名单检测与序列号遥测。
-- **⚙️ 官方更新策略控制**：一键切换 `CheckUpdtVM` 策略键，禁止烦人的更新弹窗，或按需重新放行。
-- **🧰 注册表与路径百宝箱**：
-  - **📍 手动定位 项目D 路径**：完美支持非系统盘（D盘、E盘等）或便携式 项目D 安装路径，支持文件选择对话框一键定位、多盘符智能轮询探测与永久记忆
-  - 一键直达 项目D 程序根目录
-  - 一键唤醒并自动跳转至注册表项 `HKEY_CURRENT_USER\Software\DownloadManager`
-  - 一键将当前所有 项目D 注册表配置完整导出至桌面备忘（`IDM_Reg_Backup.reg`）
-- **⚡ 进程控制**：支持一键安全终止、唤醒或重启 项目D 主程序。
+- **🛡️ Hosts Loopback Shield**: Intelligently toggles `127.0.0.1` loopback mappings in the Windows `hosts` file for 8 primary verification servers (e.g., `tonec.com`, `registeridm.com`), severing network-layer telemetry and serial blacklisting.
+- **⚙️ Official Update Policy Control**: Toggles the `CheckUpdtVM` registry policy to silence automated update prompts or re-enable them on demand.
+- **🧰 Registry & Path Utilities**:
+  - **📍 Custom 项目D Path Resolution**: Full support for non-system drives (D:\, E:\, etc.) and portable installations with automatic polling, interactive file selection dialogs, and persistent configuration memory.
+  - One-click navigation to the 项目D installation directory.
+  - One-click launch and deep-navigation to `HKEY_CURRENT_USER\Software\DownloadManager` in Windows Registry Editor.
+  - Complete one-click registry configuration export to the desktop (`IDM_Reg_Backup.reg`).
+- **⚡ Process Control**: Safe single-click termination, execution, and restart of the 项目D core process.
 
 ---
 
-## 🔬 核心实现原理
+## 🔬 Core Architecture & Mechanisms
 
 ```
-[原始 项目D.exe] ──> [PE 结构完整性校验] ──> [AOB 特征码全表扫描]
-                             │
-                             ├──> 1. AOB 特征码定位并修补 15 处 / 31 字节机器指令
-                             ├──> 2. 剥离 PE 证书目录 + 截断尾部 10,608 字节签名
-                             ├──> 3. 重算并修复 PE Checksum 校验和（微软标准算法）
-                             ├──> 4. 落盘前/后双重 PE 复验，失败自动回滚
-                             └──> 5. 抹除 Serial 伪键，写入干净的授权信息
+[Stock 项目D.exe] ──> [PE Structural Integrity Check] ──> [AOB Dual-State Signature Scan]
+                               │
+                               ├──> 1. AOB Signature Scan & Patch (15 sites / 31 bytes)
+                               ├──> 2. Zero Authenticode Directory & Truncate 10,608-byte Overlay
+                               ├──> 3. Standard PE Checksum Recomputation (Microsoft Algorithm)
+                               ├──> 4. Pre/Post-Write Dual PE Validation with Atomic Rollback
+                               └──> 5. Purge Counterfeit Serial & Register Valid Entitlement
 ```
 
-### 0. AOB 特征码扫描引擎（v3 架构核心）
+### 0. AOB Pattern Signature Scanning Engine (v3 Architecture Core)
 
-**旧版（v2 及以前）** 使用硬编码文件偏移定位补丁点。项目D 每次小版本更新都会重编译 `项目D.exe`，导致代码段发生**非均匀位移**（实测 6.43b10 → 6.43b11 位移在 −896 ~ +64 字节间跳变），硬编码偏移会直接**写坏映像**，表现为系统报错「不是有效的 Win32 应用程序」。
+Legacy solutions (v2 and earlier) relied on **hardcoded file offsets**. Each minor 项目D maintenance release involves full re-compilation, inducing **non-uniform code relocations** (e.g., shifts ranging non-linearly from −896 to +64 bytes between 6.43 build 10 and build 11). Fixed offsets inevitably corrupt executable code sections, triggering fatal Win32 errors such as `0x80004005: The specified executable is not a valid application for this OS platform`.
 
-**v3 架构**改为 **AOB（Array-Of-Bytes）特征码扫描**：
+The **v3 architecture** transitions to an **Array of Bytes (AOB) Pattern Signature Scanning Engine**:
 
-1. 每个补丁点携带 **原始态** 与 **已补丁态** 两份特征码；
-2. 扫描时优先匹配「已补丁态」（天然支持幂等重复执行），否则匹配「原始态」；
-3. 特征码必须**唯一命中**，且命中位置的字节必须与期望值完全一致（双保险）；
-4. **任一**位点未命中 → 立即中止，**零字节写入**；
-5. 特征码取自多个 项目D 版本的**共同稳定区**，天然免疫代码位移。
+1. Each patch target defines both **Pristine** (`SigOriginal`) and **Patched** (`SigPatched`) byte signatures.
+2. The engine scans for `SigPatched` first to ensure seamless idempotency across multiple runs.
+3. Signatures require **strict unique matching** across the entire binary image, coupled with redundant `Expected` byte checks at the computed relative offset.
+4. If **any required site** fails to match, the engine aborts with zero disk modifications.
+5. Signatures are derived from **cross-version common invariant regions**, filtering out compiler-generated relocation pointers.
 
-> 当前特征码表经 **项目D 6.43 build 10**、**6.43 build 11 (6.43.11.2)** 与 **6.43 build 11 (6.43.11.3)** 三版本逐字节交叉验证。
-> 其中 **14 个为通用必需位点**，三版本全部唯一命中；
-> **第 15 个为 build 11.3 专属的可选位点**（详见 §0.2），在 b10 / 11.2 上特征码零命中，由可选机制自动跳过。
+> Current signatures are validated across **five releases**: **6.43 build 10**, **build 11 (6.43.11.2)**, **build 11 (6.43.11.3)**, **build 12 (6.43.12.3)**, and **build 15 (6.43.15.3)**.  
+> The **14 required sites** match uniquely across all five versions.  
+> The **15th site** is an optional version-adaptive patch targeting the build 11.3+ anti-piracy behavior (see §0.2); it does not exist in build 10 / 11.2 and is skipped automatically.
 
-### 0.1 版本感知备份（防止升级后回滚点错版）
+### 0.1 Version-Aware Backup Mechanism (Preventing Stale Rollback Points)
 
-用户升级 项目D 后，目录中遗留的 `项目D.exe.BAK` 仍可能是**上一版本的官方原版**。若直接沿用：
-- 回滚点会指向错误版本；
-- 「一键还原官方原版」会把旧版主程序盖到新版安装上（主程序与依赖库版本错配）。
+When a user updates 项目D, an existing `项目D.exe.BAK` in the target directory often contains the stock binary of the **previous version**. Unconditionally reusing this file leads to version skew:
+- Rollback snapshots point to an outdated release.
+- Restoring the backup overwrites the updated installation with obsolete binaries, creating runtime DLL interface mismatches.
 
-本工具采用**版本感知备份**：
+This toolkit enforces a **Version-Aware Backup Protocol**:
 
-| 情形 | 处理 |
+| Scenario | Engine Action |
 | :--- | :--- |
-| BAK 不存在 | 直接备份 |
-| BAK 版本 == 当前版本 | 保持不变 |
-| BAK 版本 ≠ 当前版本，且当前文件为纯净原版 | 旧备份归档为 `项目D.exe.BAK.<旧版本>`，写入新备份 |
-| BAK 版本 ≠ 当前版本，且当前文件已含补丁 | **拒绝继续**，避免污染备份 |
+| `BAK` missing | Creates backup immediately from current binary. |
+| `BAK` version == Current version | Preserves existing backup without modification. |
+| `BAK` version ≠ Current version & Current binary is pristine | Archives outdated backup to `项目D.exe.BAK.<oldVer>` and captures clean backup of new release. |
+| `BAK` version ≠ Current version & Current binary is already modified | **Refuses to overwrite backup**, protecting user rollback safety. |
 
-同时「一键还原官方原版」加入**版本一致性守卫**：备份与当前安装版本不一致时**拒绝还原**。
+Additionally, the restoration module enforces a **Version Consistency Guard**, rejecting restore operations if the backup version differs from installed companion components.
 
-### 0.2 可选位点机制（Optional · 版本自适应）
+### 0.2 Optional-Site Mechanism (Version-Adaptive Patching)
 
-当某个补丁位点**只在部分版本存在**时（如官方在新版本中新增的对抗逻辑），
-若强行要求全部位点命中，引擎会在旧版本上误判为「特征码不匹配」而拒绝打补丁。
+Certain anti-piracy branches only exist in specific compiler builds (e.g., defensive checks introduced in newer maintenance revisions). Requiring unanimous matching across all points causes the engine to falsely reject legacy releases.
 
-v1.4.0 引入 `AobPoint.Optional` 标志：
+Version 1.4.0 introduces the `AobPoint.Optional` flag:
 
-| 位点类型 | 命中 | 未命中 |
+| Site Classification | Pattern Found | Pattern Not Found |
 | :--- | :--- | :--- |
-| **必需位点** | 正常打补丁 | **中止写入，零字节落盘** |
-| **可选位点** | 正常打补丁 | 打印「跳过可选位点（本版本无此逻辑）」，**不阻断** |
+| **Required Site** | Patches binary. | **Aborts operation with zero disk writes.** |
+| **Optional Site** | Patches binary. | Logs informational message and **continues without error**. |
 
-门禁判定改为 `必需位点全中 == 必需位点总数`。
+Preflight gating requires that all required sites are satisfied: `requiredOk == requiredCount`.
 
-**实战收益**：一套引擎同时适配 b10 / 11.2 / 11.3 三个版本，**无需任何版本分支判断**：
+**Multi-Version Adaptability Matrix**:
 
-| 版本 | 生效位点 | 产物哈希 |
+| Release Target | Matched Sites | Resulting Binary Hash |
 | :--- | :--- | :--- |
-| build 10 | 14 / 15（可选跳过） | 与 v1.3.0 **完全一致**（零回归） |
-| build 11.2 | 14 / 15（可选跳过） | 与 v1.3.0 **完全一致**（零回归） |
-| build 11.3 | **15 / 15** | 新增 1 字节补丁，抑制注册弹窗 |
+| **build 10** | 14 / 15 (Optional skipped) | Identical to v1.3.0 (`712BD0D9…`) — Zero Regression |
+| **build 11 (11.2)** | 14 / 15 (Optional skipped) | Identical to v1.3.0 (`3470B5B8…`) — Zero Regression |
+| **build 11 (11.3)** | **15 / 15** | Applies 15th site patch (`641A6D97…`), neutralizing registration dialogs |
+| **build 12 (12.3)** | **15 / 15** | Applies 15th site patch (`B9B6F951…`) |
+| **build 15 (15.3)** | **15 / 15** | Applies 15th site patch (`5005D219…`) — see §0.3 |
+
+### 0.3 Build 15 (6.43.15.3) — Silent Auto-Update Invalidation
+
+**Observed failure mode**: 项目D's built-in updater silently replaced the already-activated `项目D.exe` with a freshly downloaded stock build 15 binary, resetting the entitlement state back to `v6.43b15 Trial` (CWE-602 — the privilege decision is enforced entirely client-side).
+
+The v1.4.0 engine correctly **refused to write** (9 of 15 signatures missed, zero bytes flushed), leaving the user with an unactivated but uncorrupted binary. Extending coverage to build 15 required two non-trivial adaptations:
+
+1. **Shrinking common-invariant region** — build 15 re-compiled a substantial portion of `.text`, so the byte region shared verbatim by all five releases contracted. Signatures were regenerated from the five-version intersection, which naturally narrowed them (e.g. `授权分支检测` 118 B → 24 B) while every site retained **dual-state uniqueness (1/1)**.
+2. **Non-uniform padding drift in `.data`** — the trial-flag/day-limit constant block gained two extra zero-padding bytes ahead of the `01 00 00 00 / 1E 00 00 00` pair. Naive sliding-Hamming matching therefore locked onto a near-miss location two bytes early (Hamming distance 2, wrong patch offset `0x379546`). The site was re-anchored by exact byte search to **`0x379524`** and confirmed by capstone disassembly.
+
+**Verification discipline applied**: every located site was cross-checked by (a) exact expected-byte match, (b) capstone semantic disassembly compared side-by-side against the build 11.3 baseline, and (c) an end-to-end patch whose diff offsets were asserted to fall **only** within patch sites ∪ PE checksum ∪ security directory.
+
+**Remediation guidance for users**: disable automatic updates (`CheckUpdtVM = 0`, written by Mode 1) so a future silent update does not invalidate the entitlement state again.
 
 ---
 
-### 1. 注册表策略 + 二进制分支的双保险设计
+### 1. Dual-Layer Defense: Registry Strategy & Binary Branch Override
 
-项目D 会对注册表中的 `Serial` 键值执行严苛的非对称公钥校验，伪造任何假序列号都会触发弹窗提示「项目D 是使用假冒序列号注册的」。
+项目D performs asymmetric cryptographic signature checks on the `Serial` registry value. Supplying an arbitrary or synthetic serial triggers counterfeit detection alarms.
 
-**注册表侧**（策略面）：
-1. **删除** `Serial` 键值（避免触发公钥校验）；
-2. 清理 `scansk`、`tvfrdt`、`radxcnt`、`ptrk_scdt`、`LastCheckQU`、`scTime`、`NextCheck`、`BList`、`md5pks` 等特征遥测键；
-3. 仅写入 `FName` / `LName` / `Email`。
+**Registry Layer (Policy Surface)**:
+1. **Purge** the `Serial` key to bypass public-key validation routines.
+2. Clean telemetry tracking keys: `scansk`, `tvfrdt`, `radxcnt`, `ptrk_scdt`, `LastCheckQU`, `scTime`, `NextCheck`, `BList`, `md5pks`.
+3. Populate identity keys: `FName`, `LName`, and `Email`.
 
-> ⚠️ **重要修正（v1.4.0）**：**删除 `Serial` 这一策略在 build 11.3 上已失效**。
-> 官方在 11.3 中新增了一条对抗逻辑：**启动时若注册表不存在 `Serial` 值，直接弹出注册对话框**（对话框资源 ID 138）。
-> 因此 v1.4.0 在**二进制判定面**新增了第 15 个补丁位点（`je` → `jmp`，永远走「Serial 已存在」路径），
-> 与注册表策略形成**双保险**。
->
-> **教训**：注册表是**策略面**（官方可随时针对性封堵），二进制分支才是**判定面**（稳定）。
+> ⚠️ **Key Insight (v1.4.0)**: **Deleting `Serial` alone is insufficient in build 11.3**.  
+> Build 11.3 introduced a defensive check: **if the `Serial` key is absent on launch, 项目D immediately forces the registration modal dialog** (Dialog Resource ID 138).  
+> Version 1.4.0 adds Site #15 at the binary decision level (`je` → `jmp`), forcing execution down the "Serial present and verified" path, establishing a **dual-layer defense**.  
+>  
+> *Architectural Principle*: Registry keys represent a volatile policy surface subject to vendor modification; binary conditional branches represent the invariant decision surface.
 
-### 2. PE 签名剥离与校验和校正
-修改二进制指令后，官方的 Authenticode 数字签名自然失效，会导致 Windows 驱动或杀毒软件报警签名损坏。  
-本工具直接解析 PE 文件头：
-- 清除 `IMAGE_DIRECTORY_ENTRY_SECURITY` 的 `VirtualAddress` 与 `Size`；
-- 移除物理追加在文件尾部的 10,608 字节签名证书块（文件由 6,199,664 截断为 6,189,056 字节）；
-- 使用微软标准算法重新计算 PE Checksum，确保二进制结构规范合法。
+### 2. Authenticode Stripping & PE Checksum Normalization
+
+Patching code sections invalidates the official Authenticode digital signature, causing security subsystems to flag the executable as tampered.  
+This toolkit parses the PE image dynamically:
+- Clears `VirtualAddress` and `Size` in `IMAGE_DIRECTORY_ENTRY_SECURITY` (Data Directory index 4).
+- Truncates the physical 10,608-byte digital certificate block appended to the file overlay (e.g., resizing build 11.3 from 6,200,176 to exactly 6,189,568 bytes, or build 15.3 from 6,201,712 to exactly 6,191,104 bytes — both matching `pe.ImageEnd`).
+- Recomputes the PE Checksum using the standard Microsoft folding addition algorithm, restoring binary structural compliance.
 
 ---
 
-## 🚀 快速开始
+## 🚀 Quick Start
 
-### 方式一：直接运行成品
+### Method 1: Pre-Compiled Release Binary
 
-1. 从 [Releases 页面](https://github.com/angusdevgo/IDM_Pro_Tool/releases) 下载最新版本的压缩包；
-2. 解压后确保 `app_icon.png` 与 `IDM_Pro_Tool.exe` 位于同一文件夹；
-3. 右键选择 **以管理员身份运行** `IDM_Pro_Tool.exe`；
-4. 在图形界面中选择您需要的功能并点击执行。
+1. Download the latest archive from the [Releases Page](https://github.com/angusdevgo/IDM_Pro_Tool/releases).
+2. Extract the archive, ensuring `app_icon.png` resides alongside `IDM_Pro_Tool.exe`.
+3. Right-click `IDM_Pro_Tool.exe` and select **Run as administrator**.
+4. Select your desired mode from the interface and click execute.
 
-### 方式二：源码编译
+### Method 2: Compile from Source
 
-只需机器拥有 Windows 原生环境（Win10 / Win11 自带 .NET 4.x），克隆仓库后双击 `build.bat`：
+Compiles natively on any modern Windows environment (Windows 10 / 11 includes .NET Framework 4.x out of the box). Clone the repository and run `build.bat`:
 
 ```powershell
-# 1. 克隆本仓库
+# 1. Clone the repository
 git clone https://github.com/angusdevgo/IDM_Pro_Tool.git
 cd IDM_Pro_Tool
 
-# 2. 运行构建脚本
+# 2. Execute the native build script
 .\build.bat
 ```
 
-> **构建提示**：`build.bat` 内部通过 `%WINDIR%\Microsoft.NET\Framework64\v4.0.30319\csc.exe` 进行本地编译，耗时仅约 1~2 秒。
+> **Build Details**: `build.bat` invokes `%WINDIR%\Microsoft.NET\Framework64\v4.0.30319\csc.exe` directly, completing compilation in 1–2 seconds with zero toolchain overhead.
 
 ---
 
-## 💻 命令行模式 (CLI Support)
+## 💻 Command Line Interface (CLI)
 
-工具支持无界面静默运行，非常便于集成到自动化运维、装机维护脚本或 CI/CD 流水线中：
+The toolkit features full headless command-line support for automation scripts, unattended deployments, and CI/CD pipelines:
 
 ```powershell
-# 执行模式一：极速底层解锁
+# Execute Mode 1: Rapid Deep Unlock (AOB binary patch + registration)
 IDM_Pro_Tool.exe -patch
 
-# 执行模式二：永久冻结试用期（Windows ACL 锁定时间戳与 CLSID）
+# Execute Mode 2: Permanent Trial Freeze (Windows ACL evaluation lock)
 IDM_Pro_Tool.exe -freeze
 
-# 执行模式三：自定义身份登记
+# Execute Mode 3: Custom Identity Registration
 IDM_Pro_Tool.exe -register "VIP_User" "vip@domain.com"
 
-# 一键还原为官方原版
+# Revert to clean stock installation from BAK
 IDM_Pro_Tool.exe -restore
 
-# 手动指定 项目D 安装路径（针对非 C 盘或自定义安装目录）
+# Explicitly configure and persist custom 项目D installation path
 IDM_Pro_Tool.exe -setpath "D:\Software\项目D"
 
-# 查看命令行帮助
+# Display CLI help documentation
 IDM_Pro_Tool.exe -help
 ```
 
 ---
 
-## 📂 项目结构
+## 📂 Project Structure
 
 ```text
 IDM_Pro_Tool/
 ├── src/
-│   ├── Program.cs          # 核心代码（单文件 ~3000 行，集成 WPF 矢量 UI 与所有核心引擎）
-│   ├── app.ico             # 包含多尺寸编码（16~256px）的应用程序原生图标
-│   ├── app_icon.png        # 256x256 高清运行时矢量展示图
-│   └── app.manifest        # Windows UAC 管理员提权与 DPI 感知清单
+│   ├── Program.cs          # Unified source (~3000 lines, code-first WPF vector UI & patch engines)
+│   ├── app.ico             # Multi-resolution application icon asset (16–256px)
+│   ├── app_icon.png        # 256x256 high-resolution vector interface asset
+│   └── app.manifest        # Windows UAC execution level & Per-Monitor DPI awareness manifest
 ├── tests/
-│   ├── PatchEngineTests.cs # 回归测试套件（61 项断言，覆盖三版本端到端）
-│   ├── QuickPatch.cs       # 最小引擎驱动（产物验证用）
-│   ├── build_tests.bat     # 测试构建脚本
-│   └── build_quick.bat     # 驱动构建脚本
-├── build.bat               # 原生批处理快速构建脚本（自动完成编译与资源归档）
-├── IDM_Pro_Tool.exe        # 编译生成的目标 x64 GUI 可执行程序
-├── app_icon.png            # 运行时窗口读取图标
-├── LICENSE                 # GPL-3.0 开源许可证
-└── README.md               # 详尽的项目说明文档
+│   ├── PatchEngineTests.cs # Automated regression harness (61 assertions across all versions)
+│   ├── QuickPatch.cs       # Minimal engine CLI harness for rapid validation
+│   ├── build_tests.bat     # Regression harness build script
+│   └── build_quick.bat     # Standalone driver build script
+├── build.bat               # Native batch compilation and asset assembly script
+├── IDM_Pro_Tool.exe        # Compiled x64 Windows GUI application
+├── app_icon.png            # Runtime window icon dependency
+├── LICENSE                 # GNU General Public License v3.0
+├── README.md               # English documentation (Default)
+└── README.zh.md            # Simplified Chinese documentation
 ```
 
 ---
 
-## 🔍 验证版本与指纹
+## 🔍 Verified Versions & Cryptographic Fingerprints
 
-本工具针对以下官方基准版本经过完整测试与哈希对齐：
+This toolkit is rigorously tested against official retail distribution binaries:
 
-| 校验项 | 项目D 6.43 build 10 | 项目D 6.43 build 11 (6.43.11.2) | 项目D 6.43 build 11 (6.43.11.3) |
-| :--- | :--- | :--- | :--- |
-| **版本号** | `项目D.exe` v6.43.10.2 | v6.43.11.2 | v6.43.11.3 |
-| **原版体积** | 6,199,664 字节 | 6,200,176 字节 | 6,200,176 字节 |
-| **原版 SHA-256** | `03CC62E9…D16D607C` | `E8B0459D…9AB9DD4E69` | `D0993EC0…7CDB194C6A` |
-| **原版 PE 校验和** | `0x005ECD00` | `0x005EF1D7` | `0x005E9C44` |
-| **修补后体积** | 6,189,056 字节 | 6,189,568 字节 | 6,189,568 字节 |
-| **修补后 SHA-256**（v1.3.0） | `712BD0D9…36FCC79CC6` | `3470B5B8…DEA6CD601D8` | `F4CF6939…20F920A5F4` |
-| **修补后 PE 校验和**（v1.3.0） | `0x005EBDA3` | `0x005E84FA` | `0x005F4B5D` |
-| **修补后 SHA-256**（v1.4.0） | 同上（未变） | 同上（未变） | `641A6D97…B6CC404763E` |
-| **修补后 PE 校验和**（v1.4.0） | `0x005EBDA3` | `0x005E84FA` | `0x005EC25E` |
+| Verification Item | build 10 | build 11 (6.43.11.2) | build 11 (6.43.11.3) | build 12 (6.43.12.3) | build 15 (6.43.15.3) |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **Product Version** | `项目D.exe` v6.43.10.2 | v6.43.11.2 | v6.43.11.3 | v6.43.12.3 | v6.43.15.3 |
+| **Stock File Size** | 6,199,664 bytes | 6,200,176 bytes | 6,200,176 bytes | 6,200,176 bytes | 6,201,712 bytes |
+| **Stock SHA-256** | `03CC62E9…D16D607C` | `E8B0459D…9AB9DD4E69` | `D0993EC0…7CDB194C6A` | `7B8D9ABA…099F214E` | `279CEED9…8A7CE737` |
+| **Stock PE Checksum** | `0x005ECD00` | `0x005EF1D7` | `0x005E9C44` | `0x005EF806` | `0x005F549C` |
+| **Patched File Size** | 6,189,056 bytes | 6,189,568 bytes | 6,189,568 bytes | 6,189,568 bytes | 6,191,104 bytes |
+| **Patched SHA-256 (v1.3.0)** | `712BD0D9…36FCC79CC6` | `3470B5B8…DEA6CD601D8` | `F4CF6939…20F920A5F4` | — | — |
+| **Patched Checksum (v1.3.0)** | `0x005EBDA3` | `0x005E84FA` | `0x005F4B5D` | — | — |
+| **Patched SHA-256 (v1.4.0)** | `712BD0D9…36FCC79CC6` | `3470B5B8…DEA6CD601D8` | `641A6D97…B6CC404763E` | — | — |
+| **Patched Checksum (v1.4.0)** | `0x005EBDA3` | `0x005E84FA` | `0x005EC25E` | — | — |
+| **Patched SHA-256 (v1.5.0)** | `712BD0D9…36FCC79CC6` | `3470B5B8…DEA6CD601D8` | `641A6D97…B6CC404763E` | `B9B6F951…07739B3E` | `5005D219…3F43466C` |
+| **Patched Checksum (v1.5.0)** | `0x005EBDA3` | `0x005E84FA` | `0x005EC25E` | `0x005F6E1F` | `0x005EC77B` |
 
-> 上述「修补后 SHA-256」为本工具 v3 引擎产物。注意其与原版 Crack v20.7 产物**仅差 PE 校验和字段** —— 原版 Crack 写入的 `0x005F0BEA` 经算法穷举验证不属于任何标准 PE 校验和算法，是无效值；本工具改为写入**标准算法计算的正确值**。
+> *Note on Historical Hashes*: Legacy crack releases (e.g. v20.7) populated the PE checksum field with `0x005F0BEA`. Exhaustive algorithmic analysis proves this value corresponds to no valid Microsoft checksum standard. This toolkit writes the **mathematically valid standard checksum**.
 
-> **特征码稳定性**：AOB 特征码取自三个版本的**共同稳定区**，已天然排除重定位指针。
-> 六个守护线程、授权分支、试用期常量等 **14 个通用位点**在三个版本中全部唯一命中；
-> 第 15 个「注册对话框抑制」位点为 **11.3 专属**，通过 `Optional` 机制实现版本自适应。
-
----
-
-## ⚠️ 免责声明 (Disclaimer)
-
-1. 本项目所提供的所有源码与可执行程序，**仅供逆向工程、Windows 内部机制、PE 文件结构以及 WPF 编程等技术学习与安全研究之用**。
-2. 请在下载测试后的 24 小时内自行删除。严禁将本项目及其产物用于任何商业用途或非法侵权行为。
-3. 如果您长期使用 项目D (项目D)，请前往 [官方正版网站](https://www.internetdownloadmanager.com/) 购买正版软件授权，支持优秀的软件开发者。
-4. 使用本工具产生的任何软件冲突或不可预知后果，由使用者自行承担，与本项目作者无关。
+> *Signature Invariance*: AOB patterns are anchored in multi-version invariant byte sequences, naturally immune to relocation noise. The 14 required sites match uniquely across all five tested releases; Site #15 automatically activates on build 11.3+ via the `Optional` subsystem.
 
 ---
 
-## 📄 开源许可证
+## ⚠️ Disclaimer
 
-本项目基于 **[GNU General Public License v3.0](LICENSE)**（GPL-3.0）协议开源。
+1. This project, including all associated source code and compiled executables, is provided **strictly for reverse engineering, Windows operating system internals, PE file structure analysis, and educational security research**.
+2. Users should delete all downloaded files within 24 hours of testing. Commercial use or unauthorized redistribution is strictly prohibited.
+3. If you regularly use 项目D, please support software developers by purchasing an official license at the [Official 项目D Website](https://www.internetdownloadmanager.com/).
+4. The author assumes no liability for software conflicts, data loss, or system instability arising from the use of this software.
 
-### 你可以自由地
+---
 
-- ✅ **使用** —— 任何目的（含商业用途）
-- ✅ **研究** —— 阅读、学习、修改源码
-- ✅ **分发** —— 复制、再发布
-- ✅ **改进** —— 修改后发布自己的版本
+## 📄 Open Source License
 
-### 你需要遵守
+This project is licensed under the **[GNU General Public License v3.0](LICENSE)** (GPL-3.0).
 
-- 📌 **开源传染** —— 基于本项目修改/衍生的作品，**必须同样以 GPL-3.0 开源**并附完整源码
-- 📌 **保留声明** —— 必须保留原始版权声明与许可证文本
-- 📌 **标注修改** —— 修改过的文件需显著标明「已修改」及修改日期
-- 📌 **无附加限制** —— 不得对下游用户施加 GPL 之外的额外限制
+### Permissions
 
-### 特别说明
+- ✅ **Commercial Use** — May be used for any purpose, including commercial endeavors.
+- ✅ **Modification** — Full freedom to inspect, research, and alter source code.
+- ✅ **Distribution** — Freedom to copy, share, and redistribute.
+- ✅ **Patent Grant** — Express patent grant from contributors.
 
-- ⚠️ **无担保** —— 本软件按「原样」提供，作者不承担任何担保责任
-- ⚠️ **仅供学习研究** —— 详见下方免责声明，请勿用于商业侵权用途
+### Conditions & Obligations
 
-完整条款请见 [LICENSE](LICENSE) 文件，或访问 <https://www.gnu.org/licenses/gpl-3.0.html>。
+- 📌 **Copyleft (Reciprocal License)** — Any modified or derivative works **must also be released under GPL-3.0** with full source code made available.
+- 📌 **License and Copyright Notice** — Original copyright headers and license text must be preserved in all copies.
+- 📌 **State Changes** — Modified files must carry prominent notices documenting that changes were made.
+- 📌 **No Additional Restrictions** — Downstream distributors may not place terms that restrict freedoms granted by GPL-3.0.
 
-欢迎提交 Issue 或 Pull Request 完善支持！
- 
-## 🤝 社区与支持
-- **LINUX DO 社区**: [https://linux.do](https://linux.do)
+### Warranty Disclaimer
+
+- ⚠️ **No Warranty** — The software is provided "AS IS", without warranty of any kind, express or implied.
+- ⚠️ **Research Purpose** — Please consult the Disclaimer above; do not use for copyright infringement.
+
+For full terms and conditions, consult the [LICENSE](LICENSE) file or visit <https://www.gnu.org/licenses/gpl-3.0.html>.
+
+Issues and Pull Requests are welcome!
+
+---
+
+## 🤝 Community & Acknowledgements
+
+- **LINUX DO Community**: [https://linux.do](https://linux.do)
 
 ---
 

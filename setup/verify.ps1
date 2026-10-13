@@ -172,6 +172,10 @@ Test-CheckItem "版本" "已有用户一键更新脚本 (update.ps1 + update.sh)
     (Test-Path (Join-Path $Root 'setup\update.ps1')) -and (Test-Path (Join-Path $Root 'setup\update.sh'))
 } "更新脚本缺失，重新拉取仓库" "两个脚本在位" "$Root\setup"
 
+Test-CheckItem "版本" "一键卸载脚本 (uninstall.ps1 + uninstall.sh)" {
+    (Test-Path (Join-Path $Root 'setup\uninstall.ps1')) -and (Test-Path (Join-Path $Root 'setup\uninstall.sh'))
+} "卸载脚本缺失，重新拉取仓库" "两个脚本在位" "$Root\setup"
+
 # -----------------------------------------------------------------------------
 # 2. 知识库与战术资产
 # -----------------------------------------------------------------------------
@@ -227,6 +231,17 @@ Test-CheckItem "Skill" "独立战术安全技能包 (safe-skills 5组)" {
     $ss = Join-Path $localSkills 'safe-skills'
     (Test-Path $ss) -and ((Get-ChildItem $ss -Directory).Count -ge 5)
 } "safe-skills 目录缺失或不足 5 个技能包" "5 组独立技能包" "$localSkills\safe-skills"
+
+# SKILL.md 带 UTF-8 BOM 时，YAML frontmatter 解析器无法识别首行 `---`，
+# 整条技能会被 DSH / Claude Code 等 Agent 静默跳过（参见 GitHub Issue #6）。
+Test-CheckItem "Skill" "技能 SKILL.md 无 UTF-8 BOM（否则被 Agent 静默跳过）" {
+    $bad = @(Get-ChildItem -Path (Join-Path $ToolDir 'skill') -Recurse -Filter 'SKILL.md' -ErrorAction SilentlyContinue |
+        Where-Object {
+            $b = [System.IO.File]::ReadAllBytes($_.FullName)
+            ($b.Length -ge 3) -and ($b[0] -eq 0xEF) -and ($b[1] -eq 0xBB) -and ($b[2] -eq 0xBF)
+        })
+    -not $bad
+} "存在带 BOM 的 SKILL.md，Agent 会静默跳过该技能；请运行 python setup/clean-format.py 修复" "全部无 BOM" "Tool/skill/**/SKILL.md"
 
 # 如果检测到用户本地的 Pi Agent 目录，则额外校验是否已同步部署到系统
 if (Test-Path $AgentDir) {

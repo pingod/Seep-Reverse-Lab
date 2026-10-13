@@ -1,22 +1,22 @@
 @echo off
-title ���� 项目D Pro Tool (WPF UI ��)
+title 编译 IDM Pro Tool (WPF UI 版)
 
 set "CSC=C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe"
 set "FW=C:\Windows\Microsoft.NET\Framework64\v4.0.30319"
 set "WPF=%FW%\WPF"
 
 echo ========================================================
-echo        ���ڱ��� 项目D Pro Tool (WPF UI ������)
+echo        正在编译 IDM Pro Tool (WPF UI 完整版)
 echo ========================================================
 echo.
 
 if not exist "%CSC%" (
-    echo [����] δ�ҵ� .NET Framework 64 λ������: %CSC%
+    echo [错误] 未找到 .NET Framework 64 位编译器: %CSC%
     pause
     exit /b 1
 )
 
-echo [1/3] ���� WPF Դ�� src\Program.cs ...
+echo [1/3] 编译 WPF 源码 src\Program.cs ...
 "%CSC%" /nologo /target:winexe /optimize+ /platform:x64 /codepage:65001 ^
     /lib:"%WPF%" ^
     /r:System.dll /r:System.Core.dll /r:Microsoft.CSharp.dll /r:System.Xaml.dll ^
@@ -27,16 +27,16 @@ echo [1/3] ���� WPF Դ�� src\Program.cs ...
 
 if not %ERRORLEVEL% equ 0 (
     echo.
-    echo [����] ����ʧ�ܣ������Ϸ�������Ϣ��
+    echo [错误] 编译失败，请检查上方报错信息。
     pause
     exit /b 1
 )
 
-echo [2/3] ���ƴ���ͼ�� app_icon.png ...
+echo [2/3] 复制窗口图标 app_icon.png ...
 copy /y "src\app_icon.png" "app_icon.png" >nul
 
-echo [3/3] �������: IDM_Pro_Tool.exe
+echo [3/3] 编译完成: IDM_Pro_Tool.exe
 echo.
-echo ע��: ������ҪͬĿ¼�µ� app_icon.png������ͼ�꣩��
+echo 注意: 运行需要同目录下的 app_icon.png（窗口图标）。
 echo.
 pause

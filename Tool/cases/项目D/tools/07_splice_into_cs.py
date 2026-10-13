@@ -1,13 +1,9 @@
 """把 samples/aob_table.cs 的 POINTS 数组替换进 src/Program.cs（换行与编码鲁棒）"""
 import io
-import os
-# --- 路径解析（相对本脚本，便于案例库移植）---
-_HERE   = os.path.dirname(os.path.abspath(__file__))
-BASE    = os.path.dirname(_HERE)                  # 案例根目录
-SAMPLES = os.path.join(BASE, "samples")
 
-PROG = BASE + r"\项目D_Pro_Tool\src\Program.cs"
-TABLE = os.path.join(SAMPLES, "aob_table.cs")
+BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+PROG = BASE + r"\IDM_Pro_Tool\src\Program.cs"
+TABLE = BASE + r"\samples\aob_table.cs"
 
 raw = open(PROG, 'rb').read()
 bom = b''
